@@ -74,3 +74,16 @@ Avoid anything that undermines the mission, especially gambling-heavy ads, misle
 ## GitHub Actions
 
 The workflow is staged at the package root as `.github/workflows/sports-validate.yml`, not inside `sports/.github`. During deployment, `sports/file.deploy.txt` copies it into the repository root so GitHub can discover it.
+
+## GitHub Actions deployment
+
+The package includes a CI/CD workflow at the package root under `.github/workflows/sports-validate.yml`. The deploy helper copies that workflow into the repository root so GitHub can discover it.
+
+To allow Actions to deploy to AWS, configure:
+
+- Secret: `AWS_ROLE_ARN`
+- Variable: `TF_STATE_BUCKET`
+
+Optional variables such as `AWS_REGION`, `CUSTOM_DOMAIN_NAME`, `ROUTE53_ZONE_NAME`, and `CREATE_ROUTE53_RECORDS` are documented in `docs/GITHUB_ACTIONS_DEPLOY.md`.
+
+The deploy job validates, applies Terraform, seeds DynamoDB through the ingest Lambda, and invalidates CloudFront.
