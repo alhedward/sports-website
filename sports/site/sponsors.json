@@ -1,0 +1,25 @@
+{
+  "slots": [
+    {
+      "label": "Foundation sponsor",
+      "name": "Available",
+      "status": "available",
+      "copy": "Premium mission-aligned placement for a major partner that supports inclusive community sport.",
+      "policy": "Recommended: sporting goods, community health, accessibility, travel, education or local business."
+    },
+    {
+      "label": "Community sponsor",
+      "name": "Available",
+      "status": "available",
+      "copy": "Lower-cost placement for clubs, small businesses and community groups.",
+      "policy": "No gambling, exploitative products, or misleading health/performance claims."
+    },
+    {
+      "label": "Affiliate / referral",
+      "name": "Future option",
+      "status": "planned",
+      "copy": "Optional future referral links for equipment, events or ticket partners after policy review.",
+      "policy": "Clearly labelled commercial links only."
+    }
+  ]
+}

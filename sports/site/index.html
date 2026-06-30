@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sports.vk2ale — Sports for Everyone</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <nav class="nav">
+      <div class="brand">Sports.vk2ale</div>
+      <a href="#partner" class="nav-link">Sponsor the mission</a>
+    </nav>
+    <section class="hero-content">
+      <p class="eyebrow">Sports for everyone</p>
+      <h1>Find a sport, follow the big events, and connect with the official bodies that can get you involved.</h1>
+      <p class="lede">A community-first sports aggregator for players, fans, families, volunteers, officials, coaches, and anyone who thought sport was not for them.</p>
+      <div class="search-panel">
+        <input id="searchInput" type="search" placeholder="Search sports, official bodies, tournaments, inclusion resources…" aria-label="Search" />
+        <button id="searchButton">Search</button>
+      </div>
+      <div class="hero-actions">
+        <a href="#directory" class="button-link">Browse sports bodies</a>
+        <a href="#events" class="button-link secondary">Upcoming international events</a>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <section class="mission" aria-label="Site mission">
+      <article>
+        <p class="eyebrow">Why this exists</p>
+        <h2>Whatever your situation, there is probably a sport-shaped door you can open.</h2>
+        <p>This site points people away from dead-end search results and towards official sporting bodies, inclusive participation resources, local pathways, and major events that can spark interest.</p>
+      </article>
+      <article class="mission-card">
+        <h3>Not just elite sport</h3>
+        <p>We include pathways for playing, spectating, volunteering, coaching, officiating, disability sport, juniors, adults, social formats, and club administrators.</p>
+      </article>
+    </section>
+
+    <section class="summary-grid" aria-label="Site summary">
+      <article><span id="bodyCount">—</span><p>Official links</p></article>
+      <article><span id="tournamentCount">—</span><p>Event hubs</p></article>
+      <article><span id="playerCount">—</span><p>Pathway profiles</p></article>
+      <article><span id="eventCount">—</span><p>Milestones</p></article>
+    </section>
+
+    <section class="content-grid" id="directory">
+      <div>
+        <div class="section-heading">
+          <p class="eyebrow">Directory</p>
+          <h2>Find official sporting bodies and pathways</h2>
+        </div>
+        <div id="organisations" class="cards"></div>
+      </div>
+      <aside>
+        <div class="section-heading">
+          <p class="eyebrow">Get involved</p>
+          <h2>Pathway starters</h2>
+        </div>
+        <div id="players" class="player-list"></div>
+      </aside>
+    </section>
+
+    <section class="content-grid alt" id="events">
+      <div>
+        <div class="section-heading">
+          <p class="eyebrow">Upcoming international tournaments</p>
+          <h2>Use big events as the invitation</h2>
+        </div>
+        <div id="tournaments" class="cards"></div>
+      </div>
+      <aside id="partner">
+        <div class="section-heading">
+          <p class="eyebrow">Commercial path</p>
+          <h2>Sponsor-ready, not spammy</h2>
+        </div>
+        <div id="sponsorSlots" class="sponsor-list"></div>
+      </aside>
+    </section>
+
+    <section class="detail" id="detailPanel" hidden>
+      <button id="closeDetail" class="ghost">Close</button>
+      <div id="detailContent"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Curated public-link demo. This site links to official sources; verify source terms before commercial data reuse. Sponsorship placements are placeholders until partners are approved.</p>
+  </footer>
+
+  <script src="/config.js"></script>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

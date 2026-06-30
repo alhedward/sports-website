@@ -1,0 +1,482 @@
+{
+  "tournaments": [
+    {
+      "id": "fifa-world-cup-2026",
+      "name": "FIFA World Cup 2026",
+      "sport": "Football",
+      "start_date": "2026-06-11",
+      "end_date": "2026-07-19",
+      "hosts": [
+        "Canada",
+        "Mexico",
+        "United States"
+      ],
+      "status": "live / upcoming fixtures",
+      "summary": "Global men’s national-team football tournament. Link out to the official event hub for fixtures, tickets, team info and participation pathways.",
+      "tags": [
+        "football",
+        "world cup",
+        "national teams",
+        "spectator pathway"
+      ],
+      "source_name": "FIFA",
+      "source_url": "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "icc-womens-t20-world-cup-2026",
+      "name": "ICC Women’s T20 World Cup 2026",
+      "sport": "Cricket",
+      "start_date": "2026-06-12",
+      "end_date": "2026-07-05",
+      "hosts": [
+        "England",
+        "Wales"
+      ],
+      "status": "live / upcoming fixtures",
+      "summary": "International women’s T20 cricket showcase. A strong hook for new fans to find cricket bodies, local clubs and official pathways.",
+      "tags": [
+        "cricket",
+        "women in sport",
+        "t20",
+        "international"
+      ],
+      "source_name": "ICC",
+      "source_url": "https://www.icc-cricket.com/",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "asian-games-2026",
+      "name": "Aichi-Nagoya Asian Games 2026",
+      "sport": "Multi-sport",
+      "start_date": "2026-09-19",
+      "end_date": "2026-10-04",
+      "hosts": [
+        "Japan"
+      ],
+      "status": "upcoming",
+      "summary": "Major multi-sport event across Asia. Good discovery point for sports people may not normally see on mainstream coverage.",
+      "tags": [
+        "multi-sport",
+        "asia",
+        "participation discovery"
+      ],
+      "source_name": "Aichi-Nagoya 2026",
+      "source_url": "https://www.aichi-nagoya2026.org/en/",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "rugby-world-cup-2027",
+      "name": "Men’s Rugby World Cup 2027",
+      "sport": "Rugby union",
+      "start_date": "2027-10-01",
+      "end_date": "2027-11-13",
+      "hosts": [
+        "Australia"
+      ],
+      "status": "upcoming",
+      "summary": "Australia-hosted international rugby showcase and a natural opportunity to send visitors towards local union, touch, sevens and wheelchair rugby pathways.",
+      "tags": [
+        "rugby",
+        "australia",
+        "world cup",
+        "community sport"
+      ],
+      "source_name": "Rugby World Cup",
+      "source_url": "https://www.rugbyworldcup.com/2027/en",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "fiba-basketball-world-cup-2027",
+      "name": "FIBA Basketball World Cup 2027",
+      "sport": "Basketball",
+      "start_date": "2027-08-27",
+      "end_date": "2027-09-12",
+      "hosts": [
+        "Qatar"
+      ],
+      "status": "upcoming",
+      "summary": "International basketball world cup. Directs fans to official basketball news, rules, pathways and national bodies.",
+      "tags": [
+        "basketball",
+        "world cup",
+        "fiba",
+        "youth pathway"
+      ],
+      "source_name": "FIBA",
+      "source_url": "https://www.fiba.basketball/en/events/fiba-basketball-world-cup-2027",
+      "last_verified": "2026-06-30"
+    }
+  ],
+  "players": [
+    {
+      "id": "participation-football",
+      "name": "Football participation pathways",
+      "sport": "Football",
+      "nationality": "Global / local",
+      "rank_label": "Start here",
+      "tournament_ids": [
+        "fifa-world-cup-2026"
+      ],
+      "feature_reason": "World Cup interest often turns into local club enquiries.",
+      "bio": "Use official bodies first: FIFA for global context, then national and local member associations for clubs, coaches, futsal, women’s football, junior football and adapted programs.",
+      "career_stats": {
+        "pathways": "club, futsal, school, social, coaching, officiating",
+        "accessibility": "varies by local association"
+      },
+      "accomplishments": [
+        "Useful for players, volunteers, fans, officials and coaches"
+      ],
+      "source_name": "FIFA",
+      "source_url": "https://www.fifa.com/",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "participation-cricket",
+      "name": "Cricket participation pathways",
+      "sport": "Cricket",
+      "nationality": "Global / local",
+      "rank_label": "Start here",
+      "tournament_ids": [
+        "icc-womens-t20-world-cup-2026"
+      ],
+      "feature_reason": "Major cricket events create a good moment to connect new fans with local cricket programs.",
+      "bio": "Use ICC for global competitions and rankings, then national cricket bodies for local clubs, junior formats, women and girls programs, umpiring and volunteering.",
+      "career_stats": {
+        "pathways": "club, indoor, social, junior, coaching, umpiring",
+        "accessibility": "ask local bodies about inclusive formats"
+      },
+      "accomplishments": [
+        "Useful for players, families, fans, officials and volunteers"
+      ],
+      "source_name": "ICC",
+      "source_url": "https://www.icc-cricket.com/",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "participation-para-sport",
+      "name": "Para sport pathways",
+      "sport": "Para sport",
+      "nationality": "Global / local",
+      "rank_label": "Inclusive",
+      "tournament_ids": [
+        "asian-games-2026"
+      ],
+      "feature_reason": "The site mission is to make sport easier to find whatever someone’s situation.",
+      "bio": "Start with Paralympic and national disability-sport bodies to find classification guidance, sports options, local clubs and pathway information.",
+      "career_stats": {
+        "pathways": "participation, classification, coaching, officiating, volunteering",
+        "accessibility": "check official body guidance first"
+      },
+      "accomplishments": [
+        "Useful for participants with disability, carers, clubs and volunteers"
+      ],
+      "source_name": "International Paralympic Committee",
+      "source_url": "https://www.paralympic.org/",
+      "last_verified": "2026-06-30"
+    }
+  ],
+  "events": [
+    {
+      "id": "fifa-2026-hub",
+      "tournament_id": "fifa-world-cup-2026",
+      "name": "Official FIFA tournament hub",
+      "date": "2026-06-11",
+      "venue": "Canada, Mexico and United States",
+      "source_name": "FIFA",
+      "source_url": "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "icc-2026-hub",
+      "tournament_id": "icc-womens-t20-world-cup-2026",
+      "name": "Official ICC tournament coverage",
+      "date": "2026-06-12",
+      "venue": "England and Wales",
+      "source_name": "ICC",
+      "source_url": "https://www.icc-cricket.com/",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "asian-games-2026-hub",
+      "tournament_id": "asian-games-2026",
+      "name": "Official Asian Games information hub",
+      "date": "2026-09-19",
+      "venue": "Aichi-Nagoya, Japan",
+      "source_name": "Aichi-Nagoya 2026",
+      "source_url": "https://www.aichi-nagoya2026.org/en/",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "rwc-2027-hub",
+      "tournament_id": "rugby-world-cup-2027",
+      "name": "Official Rugby World Cup 2027 hub",
+      "date": "2027-10-01",
+      "venue": "Australia",
+      "source_name": "Rugby World Cup",
+      "source_url": "https://www.rugbyworldcup.com/2027/en",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "fiba-2027-hub",
+      "tournament_id": "fiba-basketball-world-cup-2027",
+      "name": "Official FIBA Basketball World Cup 2027 hub",
+      "date": "2027-08-27",
+      "venue": "Qatar",
+      "source_name": "FIBA",
+      "source_url": "https://www.fiba.basketball/en/events/fiba-basketball-world-cup-2027",
+      "last_verified": "2026-06-30"
+    }
+  ],
+  "sport_bodies": [
+    {
+      "id": "australian-sports-directory",
+      "name": "Australian Sports Directory",
+      "sport": "All sports",
+      "level": "Australian directory",
+      "region": "Australia",
+      "summary": "Australian Sports Commission directory for recognised national sporting organisations and disability sporting organisations.",
+      "participation_note": "Best first stop for Australians looking for an official national body, disability sport body, club pathway or contact point.",
+      "tags": [
+        "australia",
+        "directory",
+        "find a sport",
+        "disability sport",
+        "clubs"
+      ],
+      "official_url": "https://www.ausport.gov.au/australian_sports_directory",
+      "cta_label": "Search Australian sports",
+      "source_name": "Australian Sports Commission",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "play-well",
+      "name": "Play Well — Australia’s Sport Participation Strategy",
+      "sport": "All sports",
+      "level": "Participation strategy",
+      "region": "Australia",
+      "summary": "Participation strategy focused on safe, welcoming, inclusive and enjoyable sporting environments.",
+      "participation_note": "Useful framing for clubs and sports bodies that want to grow participation beyond elite pathways.",
+      "tags": [
+        "inclusive sport",
+        "participation",
+        "clubs",
+        "volunteers",
+        "strategy"
+      ],
+      "official_url": "https://www.ausport.gov.au/playwell",
+      "cta_label": "Read the participation strategy",
+      "source_name": "Australian Sports Commission",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "play-by-the-rules",
+      "name": "Play by the Rules",
+      "sport": "All sports",
+      "level": "Club resource",
+      "region": "Australia",
+      "summary": "Resources for safe, fair and inclusive sport, including inclusion and diversity guidance for clubs and associations.",
+      "participation_note": "Helpful for volunteers, administrators and coaches who want practical inclusion tools.",
+      "tags": [
+        "inclusion",
+        "club resources",
+        "safe sport",
+        "volunteers"
+      ],
+      "official_url": "https://www.playbytherules.net.au/",
+      "cta_label": "Open inclusion resources",
+      "source_name": "Play by the Rules",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "ioc-recognised-federations",
+      "name": "IOC Recognised International Federations",
+      "sport": "All Olympic-recognised sports",
+      "level": "International directory",
+      "region": "Global",
+      "summary": "IOC list of recognised international sports federations that govern sports at world level.",
+      "participation_note": "Good global index when someone wants to find the official international body for a sport.",
+      "tags": [
+        "global",
+        "international federations",
+        "olympic",
+        "directory"
+      ],
+      "official_url": "https://www.olympics.com/ioc/recognised-international-federations",
+      "cta_label": "Browse international federations",
+      "source_name": "International Olympic Committee",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "fifa",
+      "name": "FIFA",
+      "sport": "Football",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official global football body and tournament hub.",
+      "participation_note": "Use FIFA for global tournament context, then follow national association links for local participation.",
+      "tags": [
+        "football",
+        "futsal",
+        "world cup",
+        "global"
+      ],
+      "official_url": "https://www.fifa.com/",
+      "cta_label": "Visit FIFA",
+      "source_name": "FIFA",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "icc",
+      "name": "International Cricket Council",
+      "sport": "Cricket",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official home for international cricket events, scores, rankings and news.",
+      "participation_note": "Use ICC for global cricket context, then national boards for clubs, schools and volunteer pathways.",
+      "tags": [
+        "cricket",
+        "women in sport",
+        "rankings",
+        "global"
+      ],
+      "official_url": "https://www.icc-cricket.com/",
+      "cta_label": "Visit ICC",
+      "source_name": "ICC",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "world-rugby",
+      "name": "World Rugby",
+      "sport": "Rugby union",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official global rugby union body with tournaments, rankings, education and player welfare resources.",
+      "participation_note": "Strong fit for players, coaches, match officials and welfare-focused club volunteers.",
+      "tags": [
+        "rugby union",
+        "education",
+        "player welfare",
+        "world cup"
+      ],
+      "official_url": "https://www.world.rugby/",
+      "cta_label": "Visit World Rugby",
+      "source_name": "World Rugby",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "fiba",
+      "name": "FIBA Basketball",
+      "sport": "Basketball",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official FIBA hub for basketball events, rankings, rules and member federation information.",
+      "participation_note": "Useful for connecting fans with basketball rules, competitions and national bodies.",
+      "tags": [
+        "basketball",
+        "world cup",
+        "rules",
+        "global"
+      ],
+      "official_url": "https://www.fiba.basketball/en",
+      "cta_label": "Visit FIBA",
+      "source_name": "FIBA",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "world-athletics",
+      "name": "World Athletics",
+      "sport": "Athletics",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official global athletics hub for running, jumping, throwing, walking, records and events.",
+      "participation_note": "Broad participation appeal because athletics includes school, club, masters, road running and officiating pathways.",
+      "tags": [
+        "athletics",
+        "running",
+        "records",
+        "world championships"
+      ],
+      "official_url": "https://worldathletics.org/",
+      "cta_label": "Visit World Athletics",
+      "source_name": "World Athletics",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "world-aquatics",
+      "name": "World Aquatics",
+      "sport": "Aquatics",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official global home for swimming, diving, water polo, artistic swimming, open water and high diving.",
+      "participation_note": "Useful for families and participants exploring pool, open-water and aquatic club options.",
+      "tags": [
+        "swimming",
+        "diving",
+        "water polo",
+        "aquatics"
+      ],
+      "official_url": "https://www.worldaquatics.com/",
+      "cta_label": "Visit World Aquatics",
+      "source_name": "World Aquatics",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "world-tennis",
+      "name": "World Tennis / ITF",
+      "sport": "Tennis",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official international tennis body, including tours, rules, rankings, wheelchair tennis and development resources.",
+      "participation_note": "Useful for tennis pathways across juniors, social tennis, wheelchair tennis, officials and coaches.",
+      "tags": [
+        "tennis",
+        "wheelchair tennis",
+        "rules",
+        "participation"
+      ],
+      "official_url": "https://www.itftennis.com/",
+      "cta_label": "Visit World Tennis / ITF",
+      "source_name": "World Tennis / ITF",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "ipc",
+      "name": "International Paralympic Committee",
+      "sport": "Para sport",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official Paralympic movement hub for Para sport news, events, classification and results.",
+      "participation_note": "Core pathway link for inclusive sport, classification awareness and Para sport discovery.",
+      "tags": [
+        "para sport",
+        "disability sport",
+        "classification",
+        "paralympics"
+      ],
+      "official_url": "https://www.paralympic.org/",
+      "cta_label": "Visit IPC",
+      "source_name": "International Paralympic Committee",
+      "last_verified": "2026-06-30"
+    },
+    {
+      "id": "world-wheelchair-rugby",
+      "name": "World Wheelchair Rugby",
+      "sport": "Wheelchair rugby",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Official governing body for wheelchair rugby.",
+      "participation_note": "A strong example of a high-energy pathway for athletes with disability and volunteers interested in Para sport.",
+      "tags": [
+        "wheelchair rugby",
+        "para sport",
+        "rugby",
+        "disability sport"
+      ],
+      "official_url": "https://worldwheelchair.rugby/",
+      "cta_label": "Visit World Wheelchair Rugby",
+      "source_name": "World Wheelchair Rugby",
+      "last_verified": "2026-06-30"
+    }
+  ]
+}

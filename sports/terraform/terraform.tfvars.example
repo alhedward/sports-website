@@ -1,0 +1,16 @@
+aws_region      = "ap-southeast-2"
+project_name    = "global-sports-spotlight"
+environment     = "dev"
+lambda_runtime  = "python3.13"
+
+# POC custom domain. Terraform expects a public Route 53 hosted zone for vk2ale.com
+# in this AWS account, with the registrar delegated to the zone's name servers.
+custom_domain_name     = "sports.vk2ale.com"
+route53_zone_name      = "vk2ale.com"
+create_route53_records = true
+
+# Keep the API CORS origin locked to the POC frontend URL.
+cors_allow_origin = "https://sports.vk2ale.com"
+
+# Set true only when you have replaced the seed ingest with a real licensed data updater.
+enable_daily_ingest_schedule = false
