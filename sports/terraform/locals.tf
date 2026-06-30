@@ -11,7 +11,7 @@ locals {
   }
 
   cloudfront_certificate_arn = local.custom_domain_enabled ? aws_acm_certificate_validation.site[0].certificate_arn : null
-  public_site_url             = local.custom_domain_enabled ? "https://${var.custom_domain_name}" : "https://${aws_cloudfront_distribution.site.domain_name}"
+  public_site_url            = local.custom_domain_enabled ? "https://${var.custom_domain_name}" : "https://${aws_cloudfront_distribution.site.domain_name}"
 
   content_types = {
     html = "text/html; charset=utf-8"

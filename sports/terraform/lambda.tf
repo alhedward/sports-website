@@ -5,11 +5,15 @@ resource "aws_iam_role" "lambda_role" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
-      Action = "sts:AssumeRole"
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
   })
 
   tags = local.common_tags
@@ -26,22 +30,24 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:BatchWriteItem",
-        "dynamodb:PutItem",
-        "dynamodb:GetItem",
-        "dynamodb:Scan",
-        "dynamodb:Query"
-      ]
-      Resource = [
-        aws_dynamodb_table.tournaments.arn,
-        aws_dynamodb_table.players.arn,
-        aws_dynamodb_table.events.arn,
-        aws_dynamodb_table.sport_bodies.arn
-      ]
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:BatchWriteItem",
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:Scan",
+          "dynamodb:Query"
+        ]
+        Resource = [
+          aws_dynamodb_table.tournaments.arn,
+          aws_dynamodb_table.players.arn,
+          aws_dynamodb_table.events.arn,
+          aws_dynamodb_table.sport_bodies.arn
+        ]
+      }
+    ]
   })
 }
 
