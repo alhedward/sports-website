@@ -16,32 +16,27 @@ echo "Source: {{SOURCE_SITE_DIR}}"
 echo "Dest:   {{DEST_SITE_DIR}}"
 
 # Safe copy: do not use rsync --delete here.
-# Keep Terraform state, local .tfvars, and generated zip artifacts out of the copy.
-rsync -a \
-  --exclude '.terraform/' \
-  --exclude 'terraform.tfstate' \
-  --exclude 'terraform.tfstate.backup' \
-  --exclude '*.tfstate' \
-  --exclude '*.tfstate.backup' \
-  --exclude 'api.zip' \
-  --exclude 'ingest.zip' \
-  --exclude '.github/' \
-  "{{SOURCE_SITE_DIR}}/" "{{DEST_SITE_DIR}}/"
+# Keep Terraform state, local .tfvars, generated zip artifacts, and package-staged workflows out of the site copy.
+rsync -a   --exclude '.terraform/'   --exclude 'terraform.tfstate'   --exclude 'terraform.tfstate.backup'   --exclude '*.tfstate'   --exclude '*.tfstate.backup'   --exclude 'api.zip'   --exclude 'ingest.zip'   --exclude '.github/'   "{{SOURCE_SITE_DIR}}/" "{{DEST_SITE_DIR}}/"
 
-# If the package includes a workflow under sports/.github, copy it to the repo root.
-# This keeps GitHub Actions in the normal .github/workflows location without deleting existing workflows.
-if [ -d "{{SOURCE_SITE_DIR}}/.github" ]; then
+# GitHub only discovers workflows at the repository root: .github/workflows/.
+# The package stages workflows at {{EXTRACT_DIR}}/.github so they land beside the sports/ folder in the repo.
+if [ -d "{{EXTRACT_DIR}}/.github" ]; then
+  echo "== Copying GitHub Actions workflows to repo root =="
+  mkdir -p "{{DEST_PARENT_DIR}}/.github"
+  rsync -a "{{EXTRACT_DIR}}/.github/" "{{DEST_PARENT_DIR}}/.github/"
+elif [ -d "{{SOURCE_SITE_DIR}}/.github" ]; then
+  echo "== Copying legacy packaged GitHub Actions workflows to repo root =="
   mkdir -p "{{DEST_PARENT_DIR}}/.github"
   rsync -a "{{SOURCE_SITE_DIR}}/.github/" "{{DEST_PARENT_DIR}}/.github/"
+else
+  echo "No packaged GitHub Actions workflows found."
 fi
 
 cd "{{DEST_PARENT_DIR}}"
 
 echo "== Validation =="
-python3 -m py_compile \
-  "{{SITE_NAME}}/lambda/api/handler.py" \
-  "{{SITE_NAME}}/lambda/ingest/handler.py" \
-  "{{SITE_NAME}}/scripts/seed_data.py"
+python3 -m py_compile   "{{SITE_NAME}}/lambda/api/handler.py"   "{{SITE_NAME}}/lambda/ingest/handler.py"   "{{SITE_NAME}}/scripts/seed_data.py"
 
 if command -v node >/dev/null 2>&1; then
   node --check "{{SITE_NAME}}/site/app.js"
@@ -59,21 +54,10 @@ fi
 
 echo "== Git =="
 git status
-git add \
-  "{{SITE_NAME}}/VERSION" \
-  "{{SITE_NAME}}/README.md" \
-  "{{SITE_NAME}}/Makefile" \
-  "{{SITE_NAME}}/lambda" \
-  "{{SITE_NAME}}/site" \
-  "{{SITE_NAME}}/terraform" \
-  "{{SITE_NAME}}/data" \
-  "{{SITE_NAME}}/docs" \
-  "{{SITE_NAME}}/scripts" \
-  "{{SITE_NAME}}/deployer" \
-  "{{SITE_NAME}}/file.deploy.txt"
+git add   "{{SITE_NAME}}/VERSION"   "{{SITE_NAME}}/README.md"   "{{SITE_NAME}}/Makefile"   "{{SITE_NAME}}/lambda"   "{{SITE_NAME}}/site"   "{{SITE_NAME}}/terraform"   "{{SITE_NAME}}/data"   "{{SITE_NAME}}/docs"   "{{SITE_NAME}}/scripts"   "{{SITE_NAME}}/deployer"   "{{SITE_NAME}}/file.deploy.txt"
 
-if [ -f ".github/workflows/terraform-plan.yml" ]; then
-  git add ".github/workflows/terraform-plan.yml"
+if [ -d ".github/workflows" ]; then
+  git add ".github/workflows"
 fi
 
 git status

@@ -70,3 +70,7 @@ Good long-run revenue options:
 6. ethical display advertising later.
 
 Avoid anything that undermines the mission, especially gambling-heavy ads, misleading performance products, exploitative financial products, or anything that makes participation feel less accessible.
+
+## GitHub Actions
+
+The workflow is staged at the package root as `.github/workflows/sports-validate.yml`, not inside `sports/.github`. During deployment, `sports/file.deploy.txt` copies it into the repository root so GitHub can discover it.

@@ -514,7 +514,7 @@ class DeployApp:
         self.root.geometry("1120x800")
 
         self.package_path = StringVar()
-        self.repo_parent = StringVar(value=str(Path.home() / "git" / "lroc-website"))
+        self.repo_parent = StringVar(value=str(Path.home() / "git" / "sports-website"))
         self.site_name = StringVar(value="sports")
         self.commit_message = StringVar(value="")
         self.watch_actions = BooleanVar(value=True)
@@ -666,7 +666,7 @@ class DeployApp:
             self.commit_message.set(infer_commit_message(self.package_path.get(), self.site_name.get()))
 
     def choose_repo_parent(self) -> None:
-        path = filedialog.askdirectory(title="Select repo parent folder, e.g. ~/git/lroc-website")
+        path = filedialog.askdirectory(title="Select repo parent folder, e.g. ~/git/sports-website")
         if path:
             self.repo_parent.set(path)
             self.refresh_script()

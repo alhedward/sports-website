@@ -1,0 +1,56 @@
+name: Sports Site Validate
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "sports/terraform/**"
+      - "sports/site/**"
+      - "sports/lambda/**"
+      - "sports/data/**"
+      - "sports/scripts/**"
+      - ".github/workflows/sports-validate.yml"
+  pull_request:
+    paths:
+      - "sports/terraform/**"
+      - "sports/site/**"
+      - "sports/lambda/**"
+      - "sports/data/**"
+      - "sports/scripts/**"
+      - ".github/workflows/sports-validate.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Python compile check
+        run: |
+          python3 -m py_compile             sports/lambda/api/handler.py             sports/lambda/ingest/handler.py             sports/scripts/seed_data.py
+
+      - name: JavaScript syntax check
+        run: |
+          node --check sports/site/app.js
+
+      - name: Terraform fmt
+        working-directory: sports/terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        working-directory: sports/terraform
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        working-directory: sports/terraform
+        run: terraform validate
