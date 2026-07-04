@@ -42,10 +42,18 @@
     </section>
 
     <section class="summary-grid" aria-label="Site summary">
-      <article><span id="bodyCount">—</span><p>Official links</p></article>
-      <article><span id="tournamentCount">—</span><p>Event hubs</p></article>
-      <article><span id="playerCount">—</span><p>Pathway profiles</p></article>
-      <article><span id="topPlayerCount">—</span><p>Top-player spotlights</p></article>
+      <a class="summary-card" href="#directory" aria-label="Jump to official sporting bodies directory">
+        <span id="bodyCount">—</span><p>Official links</p>
+      </a>
+      <a class="summary-card" href="#events" aria-label="Jump to event hubs">
+        <span id="tournamentCount">—</span><p>Event hubs</p>
+      </a>
+      <a class="summary-card" href="#pathways" aria-label="Jump to pathway profiles">
+        <span id="playerCount">—</span><p>Pathway profiles</p>
+      </a>
+      <a class="summary-card priority" href="#top-players" aria-label="Jump to top-player spotlights">
+        <span id="topPlayerCount">—</span><p>Top-player spotlights</p>
+      </a>
     </section>
 
     <section class="content-grid" id="directory">
@@ -56,7 +64,7 @@
         </div>
         <div id="organisations" class="cards"></div>
       </div>
-      <aside>
+      <aside id="pathways">
         <div class="section-heading">
           <p class="eyebrow">Get involved</p>
           <h2>Pathway starters</h2>

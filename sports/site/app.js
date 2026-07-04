@@ -91,6 +91,15 @@ function tournamentCard(t) {
   `;
 }
 
+
+function shortRankLabel(label) {
+  return String(label || 'Featured athlete')
+    .replace(/\s*\/\s*/g, ' / ')
+    .replace(/\bspotlight\b/ig, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim() || 'Featured athlete';
+}
+
 function pathwayCard(p) {
   const primaryStats = Object.entries(p.career_stats || {}).slice(0, 2);
   return `
@@ -118,7 +127,7 @@ function topPlayerCard(p) {
           <h3>${safe(p.name)}</h3>
           <p class="meta">${safe(p.genre || p.sport)} · ${safe(p.country || '')}</p>
         </div>
-        <div class="rank">${safe(p.rank_label || 'Spotlight')}</div>
+        <div class="rank">${safe(shortRankLabel(p.rank_label))}</div>
       </div>
       <p>${safe(p.summary || p.why_featured || '')}</p>
       <div class="badges">${(p.tags || []).slice(0, 4).map(tag => `<span class="badge">${safe(tag)}</span>`).join('')}</div>
@@ -242,7 +251,7 @@ async function showPlayer(id) {
 async function showTopPlayer(id) {
   const p = await fetchJson(`/top-players/${encodeURIComponent(id)}`);
   els.detailContent.innerHTML = `
-    <p class="eyebrow">Top-player spotlight</p>
+    <p class="eyebrow">Top-player profile</p>
     <h2>${safe(p.name)}</h2>
     <p>${safe(p.summary || '')}</p>
     <div class="detail-row"><span>Sport genre</span><strong>${safe(p.genre || p.sport)}</strong></div>
