@@ -771,5 +771,233 @@
       "source_name": "Australian Disability Gateway",
       "last_verified": "2026-07-04"
     }
+  ],
+  "top_players": [
+    {
+      "id": "cricket-ellyse-perry",
+      "name": "Ellyse Perry",
+      "sport": "Cricket",
+      "genre": "Cricket",
+      "country": "Australia",
+      "rank_label": "Australian cricket spotlight",
+      "summary": "Elite Australian all-rounder whose career is useful for showing girls, women and multi-sport athletes what long-term participation can become.",
+      "why_featured": "A high-profile Australian cricket role model with broad appeal beyond traditional cricket audiences.",
+      "achievements": [
+        "International cricket all-rounder",
+        "Multiple World Cup winning squads",
+        "Strong role model for girls and women in sport"
+      ],
+      "stats_note": "Use official profiles and governing-body records before publishing detailed lifetime statistics.",
+      "source_name": "Cricket Australia",
+      "official_url": "https://www.cricket.com.au/",
+      "related_body_ids": [
+        "cricket-australia",
+        "play-cricket-australia"
+      ],
+      "tags": [
+        "cricket",
+        "women in sport",
+        "all-rounder",
+        "australia"
+      ]
+    },
+    {
+      "id": "cricket-pat-cummins",
+      "name": "Pat Cummins",
+      "sport": "Cricket",
+      "genre": "Cricket",
+      "country": "Australia",
+      "rank_label": "Australian cricket spotlight",
+      "summary": "Australian fast bowler and leader who helps connect fans of elite cricket with junior, club and volunteer pathways.",
+      "why_featured": "A recognisable Australian cricket figure for test, one-day and community-cricket crossover content.",
+      "achievements": [
+        "Australian international cricketer",
+        "Fast-bowling pathway inspiration",
+        "Leadership profile for club and junior programs"
+      ],
+      "stats_note": "Use Cricket Australia, ICC or other official statistics before publishing precise match totals.",
+      "source_name": "Cricket Australia",
+      "official_url": "https://www.cricket.com.au/",
+      "related_body_ids": [
+        "cricket-australia",
+        "play-cricket-australia"
+      ],
+      "tags": [
+        "cricket",
+        "fast bowling",
+        "australia",
+        "leadership"
+      ]
+    },
+    {
+      "id": "motorsport-oscar-piastri",
+      "name": "Oscar Piastri",
+      "sport": "Motor racing",
+      "genre": "Motorsport",
+      "country": "Australia",
+      "rank_label": "Australian motorsport spotlight",
+      "summary": "Australian Formula One driver whose pathway is useful for explaining karting, club racing, junior formulas and elite motorsport progression.",
+      "why_featured": "A current high-visibility Australian racing figure for motorsport discovery pages.",
+      "achievements": [
+        "Formula One driver",
+        "Australian motorsport pathway example",
+        "Useful bridge to karting and car-club participation"
+      ],
+      "stats_note": "Use Formula 1, FIA or team profiles before publishing season-by-season results.",
+      "source_name": "Formula 1",
+      "official_url": "https://www.formula1.com/",
+      "related_body_ids": [
+        "fia",
+        "motorsport-australia",
+        "karting-australia"
+      ],
+      "tags": [
+        "motor racing",
+        "formula one",
+        "karting pathway",
+        "australia"
+      ]
+    },
+    {
+      "id": "motorsport-molly-taylor",
+      "name": "Molly Taylor",
+      "sport": "Motor racing",
+      "genre": "Motorsport",
+      "country": "Australia",
+      "rank_label": "Rally / off-road spotlight",
+      "summary": "Australian rally and off-road competitor who is a strong example for women entering motorsport and technical team environments.",
+      "why_featured": "Helps show that motorsport involvement is broader than circuit racing and includes rally, off-road, officials and crews.",
+      "achievements": [
+        "Australian rally pathway example",
+        "Women-in-motorsport visibility",
+        "Cross-discipline motorsport role model"
+      ],
+      "stats_note": "Use Motorsport Australia, FIA or series records before publishing detailed results.",
+      "source_name": "Motorsport Australia",
+      "official_url": "https://motorsport.org.au/",
+      "related_body_ids": [
+        "motorsport-australia",
+        "fia"
+      ],
+      "tags": [
+        "rally",
+        "off-road",
+        "women in motorsport",
+        "australia"
+      ]
+    },
+    {
+      "id": "sailing-tom-slingsby",
+      "name": "Tom Slingsby",
+      "sport": "Sailing / yachting",
+      "genre": "Sailing",
+      "country": "Australia",
+      "rank_label": "Australian sailing spotlight",
+      "summary": "Australian sailor whose profile can help introduce club sailing, high-performance sailing, coaching, race management and yachting pathways.",
+      "why_featured": "Recognisable elite sailor for connecting spectators with local sailing-club entry points.",
+      "achievements": [
+        "Australian sailing role model",
+        "Olympic and professional-sailing pathway example",
+        "Useful bridge to club and youth sailing"
+      ],
+      "stats_note": "Use Australian Sailing, World Sailing or event records before publishing detailed titles and results.",
+      "source_name": "Australian Sailing",
+      "official_url": "https://www.sailing.org.au/",
+      "related_body_ids": [
+        "australian-sailing",
+        "discover-sailing-australia",
+        "world-sailing"
+      ],
+      "tags": [
+        "sailing",
+        "yachting",
+        "club sailing",
+        "australia"
+      ]
+    },
+    {
+      "id": "sailing-matt-wearn",
+      "name": "Matt Wearn",
+      "sport": "Sailing / yachting",
+      "genre": "Sailing",
+      "country": "Australia",
+      "rank_label": "Dinghy sailing spotlight",
+      "summary": "Australian dinghy sailor whose story works well for showing how local club sailing can feed elite pathways.",
+      "why_featured": "A strong Australian example for youth sailing, dinghy racing and Olympic-class pathways.",
+      "achievements": [
+        "Australian sailing pathway example",
+        "Dinghy and Olympic-class sailing visibility",
+        "Good fit for youth and club sailing discovery"
+      ],
+      "stats_note": "Use Australian Sailing, World Sailing or Olympic records before publishing detailed results.",
+      "source_name": "Australian Sailing",
+      "official_url": "https://www.sailing.org.au/",
+      "related_body_ids": [
+        "australian-sailing",
+        "discover-sailing-australia",
+        "world-sailing"
+      ],
+      "tags": [
+        "sailing",
+        "dinghy racing",
+        "youth pathway",
+        "australia"
+      ]
+    },
+    {
+      "id": "football-sam-kerr",
+      "name": "Sam Kerr",
+      "sport": "Football / soccer",
+      "genre": "Football",
+      "country": "Australia",
+      "rank_label": "Australian football spotlight",
+      "summary": "Australian footballer whose visibility helps introduce juniors, families and social players to football pathways.",
+      "why_featured": "High-recognition Australian football role model, especially for girls and women entering sport.",
+      "achievements": [
+        "Australian football role model",
+        "Women-in-sport visibility",
+        "Good bridge to local football clubs and national team interest"
+      ],
+      "stats_note": "Use Football Australia, club and competition records before publishing detailed goals or caps.",
+      "source_name": "Football Australia",
+      "official_url": "https://www.footballaustralia.com.au/",
+      "related_body_ids": [
+        "football-australia"
+      ],
+      "tags": [
+        "football",
+        "soccer",
+        "women in sport",
+        "australia"
+      ]
+    },
+    {
+      "id": "basketball-patty-mills",
+      "name": "Patty Mills",
+      "sport": "Basketball",
+      "genre": "Basketball",
+      "country": "Australia",
+      "rank_label": "Australian basketball spotlight",
+      "summary": "Australian basketball player whose profile is useful for connecting Olympic, professional and community basketball audiences.",
+      "why_featured": "Recognisable Australian basketball figure for juniors, social basketball and national-team discovery pages.",
+      "achievements": [
+        "Australian basketball role model",
+        "Professional and national-team pathway example",
+        "Useful bridge to community basketball"
+      ],
+      "stats_note": "Use Basketball Australia, league and Olympic records before publishing detailed lifetime totals.",
+      "source_name": "Basketball Australia",
+      "official_url": "https://www.australia.basketball/",
+      "related_body_ids": [
+        "basketball-australia",
+        "fiba"
+      ],
+      "tags": [
+        "basketball",
+        "australia",
+        "community sport",
+        "national team"
+      ]
+    }
   ]
 }

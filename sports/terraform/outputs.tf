@@ -79,3 +79,14 @@ output "sport_bodies_table_name" {
   description = "DynamoDB sport bodies / official links table name."
   value       = aws_dynamodb_table.sport_bodies.name
 }
+
+
+output "top_players_table_name" {
+  description = "DynamoDB top player spotlights table name."
+  value       = aws_dynamodb_table.top_players.name
+}
+
+output "suggestions_table_name" {
+  description = "DynamoDB pending public suggestions table name."
+  value       = aws_dynamodb_table.suggestions.name
+}

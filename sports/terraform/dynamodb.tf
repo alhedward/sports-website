@@ -65,3 +65,37 @@ resource "aws_dynamodb_table" "sport_bodies" {
 
   tags = local.common_tags
 }
+
+resource "aws_dynamodb_table" "top_players" {
+  name         = "${local.name_prefix}-top-players"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_dynamodb_table" "suggestions" {
+  name         = "${local.name_prefix}-suggestions"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = local.common_tags
+}

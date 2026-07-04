@@ -11,6 +11,7 @@ TOURNAMENTS_TABLE = DDB.Table(os.environ["TOURNAMENTS_TABLE"])
 PLAYERS_TABLE = DDB.Table(os.environ["PLAYERS_TABLE"])
 EVENTS_TABLE = DDB.Table(os.environ["EVENTS_TABLE"])
 SPORT_BODIES_TABLE = DDB.Table(os.environ["SPORT_BODIES_TABLE"])
+TOP_PLAYERS_TABLE = DDB.Table(os.environ["TOP_PLAYERS_TABLE"])
 
 DATA_FILE = Path(__file__).with_name("seed_public_sports.json")
 
@@ -34,6 +35,7 @@ def lambda_handler(event, context):
         "players": put_items(PLAYERS_TABLE, payload.get("players", [])),
         "events": put_items(EVENTS_TABLE, payload.get("events", [])),
         "sport_bodies": put_items(SPORT_BODIES_TABLE, payload.get("sport_bodies", [])),
+        "top_players": put_items(TOP_PLAYERS_TABLE, payload.get("top_players", [])),
     }
     return {
         "statusCode": 200,

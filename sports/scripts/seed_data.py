@@ -24,6 +24,7 @@ def main() -> None:
     parser.add_argument("--players-table", required=True)
     parser.add_argument("--events-table", required=True)
     parser.add_argument("--sport-bodies-table", required=True)
+    parser.add_argument("--top-players-table", required=True)
     parser.add_argument("--data-file", default="data/seed_public_sports.json")
     parser.add_argument("--region")
     args = parser.parse_args()
@@ -37,6 +38,7 @@ def main() -> None:
         "players": put_items(ddb.Table(args.players_table), payload.get("players", [])),
         "events": put_items(ddb.Table(args.events_table), payload.get("events", [])),
         "sport_bodies": put_items(ddb.Table(args.sport_bodies_table), payload.get("sport_bodies", [])),
+        "top_players": put_items(ddb.Table(args.top_players_table), payload.get("top_players", [])),
     }
     print(json.dumps({"ok": True, "seeded": counts}, indent=2))
 

@@ -10,6 +10,7 @@
   <header class="hero">
     <nav class="nav">
       <div class="brand">Sports.vk2ale</div>
+      <a href="#suggest" class="nav-link">Suggest a sport body</a>
       <a href="#partner" class="nav-link">Sponsor the mission</a>
     </nav>
     <section class="hero-content">
@@ -44,7 +45,7 @@
       <article><span id="bodyCount">—</span><p>Official links</p></article>
       <article><span id="tournamentCount">—</span><p>Event hubs</p></article>
       <article><span id="playerCount">—</span><p>Pathway profiles</p></article>
-      <article><span id="eventCount">—</span><p>Milestones</p></article>
+      <article><span id="topPlayerCount">—</span><p>Top-player spotlights</p></article>
     </section>
 
     <section class="content-grid" id="directory">
@@ -64,6 +65,17 @@
       </aside>
     </section>
 
+
+    <section class="spotlight-section" id="top-players">
+      <div class="section-heading">
+        <p class="eyebrow">Elite inspiration</p>
+        <h2>Top-player spotlights by sport genre</h2>
+        <p class="meta">These cards are curated inspiration points. Detailed lifetime stats should be checked against official profiles before publication.</p>
+      </div>
+      <div id="genreFilters" class="filter-row" aria-label="Top player genre filters"></div>
+      <div id="topPlayers" class="spotlight-grid"></div>
+    </section>
+
     <section class="content-grid alt" id="events">
       <div>
         <div class="section-heading">
@@ -79,6 +91,24 @@
         </div>
         <div id="sponsorSlots" class="sponsor-list"></div>
       </aside>
+    </section>
+
+
+    <section class="suggest" id="suggest">
+      <div class="section-heading">
+        <p class="eyebrow">Help build the directory</p>
+        <h2>Suggest an official sporting body or pathway</h2>
+        <p class="meta">Suggestions go into a moderated backend queue. Nothing is automatically published until reviewed.</p>
+      </div>
+      <form id="suggestionForm" class="suggestion-form">
+        <label>Name<input name="name" required placeholder="e.g. Local sailing association or national sporting body" /></label>
+        <label>Sport<input name="sport" required placeholder="Cricket, motor racing, sailing…" /></label>
+        <label>Official URL<input name="official_url" required type="url" placeholder="https://…" /></label>
+        <label>Region<input name="region" placeholder="Australia, NSW, Global…" /></label>
+        <label>Why add it?<textarea name="submitter_note" rows="4" placeholder="Tell us why this should be in the directory."></textarea></label>
+        <button type="submit">Submit for review</button>
+        <p id="suggestionStatus" class="meta" role="status"></p>
+      </form>
     </section>
 
     <section class="detail" id="detailPanel" hidden>

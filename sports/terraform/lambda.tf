@@ -38,13 +38,16 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           "dynamodb:PutItem",
           "dynamodb:GetItem",
           "dynamodb:Scan",
-          "dynamodb:Query"
+          "dynamodb:Query",
+          "dynamodb:DeleteItem"
         ]
         Resource = [
           aws_dynamodb_table.tournaments.arn,
           aws_dynamodb_table.players.arn,
           aws_dynamodb_table.events.arn,
-          aws_dynamodb_table.sport_bodies.arn
+          aws_dynamodb_table.sport_bodies.arn,
+          aws_dynamodb_table.top_players.arn,
+          aws_dynamodb_table.suggestions.arn
         ]
       }
     ]
@@ -79,6 +82,8 @@ resource "aws_lambda_function" "api" {
       PLAYERS_TABLE      = aws_dynamodb_table.players.name
       EVENTS_TABLE       = aws_dynamodb_table.events.name
       SPORT_BODIES_TABLE = aws_dynamodb_table.sport_bodies.name
+      TOP_PLAYERS_TABLE  = aws_dynamodb_table.top_players.name
+      SUGGESTIONS_TABLE  = aws_dynamodb_table.suggestions.name
       CORS_ALLOW_ORIGIN  = var.cors_allow_origin
     }
   }
@@ -102,6 +107,7 @@ resource "aws_lambda_function" "ingest" {
       PLAYERS_TABLE      = aws_dynamodb_table.players.name
       EVENTS_TABLE       = aws_dynamodb_table.events.name
       SPORT_BODIES_TABLE = aws_dynamodb_table.sport_bodies.name
+      TOP_PLAYERS_TABLE  = aws_dynamodb_table.top_players.name
     }
   }
 

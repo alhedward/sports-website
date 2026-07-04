@@ -5,10 +5,15 @@ const els = {
   organisations: document.querySelector('#organisations'),
   tournaments: document.querySelector('#tournaments'),
   players: document.querySelector('#players'),
+  topPlayers: document.querySelector('#topPlayers'),
+  genreFilters: document.querySelector('#genreFilters'),
+  suggestionForm: document.querySelector('#suggestionForm'),
+  suggestionStatus: document.querySelector('#suggestionStatus'),
   sponsorSlots: document.querySelector('#sponsorSlots'),
   bodyCount: document.querySelector('#bodyCount'),
   tournamentCount: document.querySelector('#tournamentCount'),
   playerCount: document.querySelector('#playerCount'),
+  topPlayerCount: document.querySelector('#topPlayerCount'),
   eventCount: document.querySelector('#eventCount'),
   searchInput: document.querySelector('#searchInput'),
   searchButton: document.querySelector('#searchButton'),
@@ -105,6 +110,22 @@ function pathwayCard(p) {
   `;
 }
 
+function topPlayerCard(p) {
+  return `
+    <article class="player spotlight" data-top-player-id="${safe(p.id)}">
+      <div class="player-top">
+        <div>
+          <h3>${safe(p.name)}</h3>
+          <p class="meta">${safe(p.genre || p.sport)} · ${safe(p.country || '')}</p>
+        </div>
+        <div class="rank">${safe(p.rank_label || 'Spotlight')}</div>
+      </div>
+      <p>${safe(p.summary || p.why_featured || '')}</p>
+      <div class="badges">${(p.tags || []).slice(0, 4).map(tag => `<span class="badge">${safe(tag)}</span>`).join('')}</div>
+    </article>
+  `;
+}
+
 function sponsorCard(slot) {
   const status = slot.status || 'available';
   return `
@@ -141,6 +162,21 @@ function renderPathways(items) {
   els.players.innerHTML = items.length ? items.map(pathwayCard).join('') : '<p class="meta">No pathways found.</p>';
   document.querySelectorAll('[data-player-id]').forEach(node => {
     node.addEventListener('click', () => showPlayer(node.dataset.playerId));
+  });
+}
+
+function renderTopPlayers(items, activeGenre = 'All') {
+  const genres = ['All', ...Array.from(new Set(items.map(item => item.genre || item.sport).filter(Boolean))).sort()];
+  if (els.genreFilters) {
+    els.genreFilters.innerHTML = genres.map(genre => `<button type="button" class="filter-chip ${genre === activeGenre ? 'active' : ''}" data-genre="${safe(genre)}">${safe(genre)}</button>`).join('');
+    els.genreFilters.querySelectorAll('[data-genre]').forEach(node => {
+      node.addEventListener('click', () => renderTopPlayers(items, node.dataset.genre));
+    });
+  }
+  const filtered = activeGenre === 'All' ? items : items.filter(item => (item.genre || item.sport) === activeGenre);
+  els.topPlayers.innerHTML = filtered.length ? filtered.map(topPlayerCard).join('') : '<p class="meta">No top-player spotlights found.</p>';
+  document.querySelectorAll('[data-top-player-id]').forEach(node => {
+    node.addEventListener('click', () => showTopPlayer(node.dataset.topPlayerId));
   });
 }
 
@@ -202,6 +238,26 @@ async function showPlayer(id) {
   els.detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+
+async function showTopPlayer(id) {
+  const p = await fetchJson(`/top-players/${encodeURIComponent(id)}`);
+  els.detailContent.innerHTML = `
+    <p class="eyebrow">Top-player spotlight</p>
+    <h2>${safe(p.name)}</h2>
+    <p>${safe(p.summary || '')}</p>
+    <div class="detail-row"><span>Sport genre</span><strong>${safe(p.genre || p.sport)}</strong></div>
+    <div class="detail-row"><span>Country</span><strong>${safe(p.country || '')}</strong></div>
+    <div class="detail-row"><span>Why featured</span><strong>${safe(p.why_featured || '')}</strong></div>
+    <div class="detail-row"><span>Official source</span><strong>${sourceLink(p)}</strong></div>
+    <h3>Exposure notes</h3>
+    ${(p.achievements || []).map(item => `<div class="detail-row"><span>Highlight</span><strong>${safe(item)}</strong></div>`).join('')}
+    <h3>Stats caution</h3>
+    <p class="note">${safe(p.stats_note || 'Verify official statistics before publishing lifetime totals.')}</p>
+  `;
+  els.detailPanel.hidden = false;
+  els.detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadSponsors() {
   const fallback = { slots: [
     { label: 'Foundation sponsor', name: 'Available', status: 'available', copy: 'Premium mission-aligned placement for a major sponsor that supports inclusive community sport.', policy: 'Recommended: sporting goods, community health, accessibility, travel, education or local business.' },
@@ -222,28 +278,53 @@ async function search() {
   renderBodies(results.organisations || []);
   renderTournaments(results.tournaments || []);
   renderPathways(results.players || []);
+  renderTopPlayers(results.top_players || []);
 }
 
 async function loadHome() {
-  const [organisations, tournaments, players, events] = await Promise.all([
+  const [organisations, tournaments, players, topPlayers, events] = await Promise.all([
     fetchJson('/organisations'),
     fetchJson('/tournaments'),
     fetchJson('/players'),
+    fetchJson('/top-players'),
     fetchJson('/events'),
   ]);
   els.bodyCount.textContent = organisations.length;
   els.tournamentCount.textContent = tournaments.length;
   els.playerCount.textContent = players.length;
-  els.eventCount.textContent = events.length;
+  els.topPlayerCount.textContent = topPlayers.length;
   renderBodies(organisations);
   renderTournaments(tournaments);
   renderPathways(players.slice(0, 8));
+  renderTopPlayers(topPlayers);
   await loadSponsors();
+}
+
+
+async function submitSuggestion(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const payload = Object.fromEntries(new FormData(form).entries());
+  els.suggestionStatus.textContent = 'Submitting suggestion…';
+  try {
+    const response = await fetch(apiUrl('/suggestions'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.message || `Request failed: ${response.status}`);
+    els.suggestionStatus.textContent = `Thanks — suggestion ${body.id} is pending review.`;
+    form.reset();
+  } catch (err) {
+    els.suggestionStatus.textContent = `Could not submit suggestion: ${err.message}`;
+  }
 }
 
 els.searchButton.addEventListener('click', search);
 els.searchInput.addEventListener('keydown', event => { if (event.key === 'Enter') search(); });
 els.closeDetail.addEventListener('click', () => { els.detailPanel.hidden = true; });
+if (els.suggestionForm) els.suggestionForm.addEventListener('submit', submitSuggestion);
 
 loadHome().catch(err => {
   console.error(err);

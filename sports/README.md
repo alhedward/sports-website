@@ -11,9 +11,10 @@ The site is intentionally not just an elite-stats database. It links visitors to
 - Static frontend hosted from private S3 through CloudFront.
 - Custom-domain-ready Terraform for `sports.vk2ale.com`.
 - API Gateway HTTP API backed by Python Lambda.
-- DynamoDB tables for tournaments, pathway profiles, event hubs and official sporting bodies.
+- DynamoDB tables for tournaments, pathway profiles, top-player spotlights, public suggestions, event hubs and official sporting bodies.
 - Python ingest Lambda for curated public-link seed data.
 - Sponsor-ready placements, deliberately empty until partners are approved.
+- Moderated public suggestion endpoint so users can help grow the curated directory without auto-publishing unverified links.
 - Sports-aware deployment helper layout: top-level `sports/` folder and `sports/file.deploy.txt`.
 
 ## Deploy with your helper
@@ -55,10 +56,12 @@ terraform output -raw site_url
 - `tournaments`: major upcoming international event hubs.
 - `events`: official event/milestone links attached to tournaments.
 - `players`: now used as pathway profiles for this POC, rather than celebrity/player stats.
+- `top_players`: sport-genre spotlight cards for elite inspiration.
+- `suggestions`: moderated public suggestions waiting for review before publication.
 
 ## Curated directory update
 
-This package expands the official body directory with Cricket Australia / Play Cricket, Motorsport Australia, FIA, Motorcycling Australia, Karting Australia, the Australian Power Boat Association, Australian Sailing / Discover Sailing, World Sailing, and accessible Sailability pathways.
+This package expands the official body directory with Cricket Australia / Play Cricket, Motorsport Australia, FIA, Motorcycling Australia, Karting Australia, the Australian Power Boat Association, Australian Sailing / Discover Sailing, World Sailing, and accessible Sailability pathways. It also adds top-player spotlight cards for cricket, motorsport, sailing, football and basketball.
 
 ## Commercial direction
 
@@ -91,3 +94,7 @@ To allow Actions to deploy to AWS, configure:
 Optional variables such as `AWS_REGION`, `CUSTOM_DOMAIN_NAME`, `ROUTE53_ZONE_NAME`, and `CREATE_ROUTE53_RECORDS` are documented in `docs/GITHUB_ACTIONS_DEPLOY.md`.
 
 The deploy job validates, applies Terraform, seeds DynamoDB through the ingest Lambda, and invalidates CloudFront.
+
+## Community-assisted growth
+
+The frontend includes a `Suggest an official sporting body or pathway` form. Submissions go to the `suggestions` table as `pending_review`; they are not added to the public directory until reviewed. The recommended OpenAI-assisted research workflow is documented in `docs/COMMUNITY_DISCOVERY_PIPELINE.md`.
