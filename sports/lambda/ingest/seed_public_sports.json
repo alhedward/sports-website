@@ -174,6 +174,68 @@
       "source_name": "International Paralympic Committee",
       "source_url": "https://www.paralympic.org/",
       "last_verified": "2026-06-30"
+    },
+    {
+      "id": "participation-cricket-australia",
+      "name": "Cricket in Australia pathways",
+      "sport": "Cricket",
+      "nationality": "Australia",
+      "rank_label": "Find a club",
+      "tournament_ids": [
+        "icc-womens-t20-world-cup-2026"
+      ],
+      "feature_reason": "Cricket has clear community entry points for juniors, adults, social players, women and girls, officials, coaches and volunteers.",
+      "bio": "Start with Play Cricket Australia to find local cricket options, then use Cricket Australia for official news, programs and national context.",
+      "career_stats": {
+        "pathways": "junior, senior, social, indoor, women and girls, coaching, umpiring, volunteering",
+        "accessibility": "check local club and association options through Play Cricket"
+      },
+      "accomplishments": [
+        "Useful for families, beginners, returning players, officials and volunteers"
+      ],
+      "source_name": "Cricket Australia — Play Cricket",
+      "source_url": "https://play.cricket.com.au/",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "participation-motorsport-australia",
+      "name": "Motor racing participation pathways",
+      "sport": "Motorsport",
+      "nationality": "Australia / global",
+      "rank_label": "Get started",
+      "tournament_ids": [],
+      "feature_reason": "Motorsport offers more entry points than driving: club membership, volunteering, officiating, karting, motorcycle sport, esports and junior programs.",
+      "bio": "Use Motorsport Australia, Karting Australia and Motorcycling Australia for official club, licence, beginner and volunteer pathways. Use the FIA for global context and international regulations.",
+      "career_stats": {
+        "pathways": "car clubs, karting, motorcycle sport, officials, volunteering, esports, junior programs",
+        "accessibility": "varies by club, discipline, venue and licence category"
+      },
+      "accomplishments": [
+        "Useful for drivers, riders, families, mechanics, officials, volunteers and fans"
+      ],
+      "source_name": "Motorsport Australia",
+      "source_url": "https://motorsport.org.au/",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "participation-sailing-australia",
+      "name": "Sailing and yachting participation pathways",
+      "sport": "Sailing / yachting",
+      "nationality": "Australia / global",
+      "rank_label": "On water",
+      "tournament_ids": [],
+      "feature_reason": "Sailing has strong pathways for kids, teens, adults, families, racing, cruising, volunteering, coaching, race management and accessible programs.",
+      "bio": "Use Australian Sailing and Discover Sailing to find clubs, learn-to-sail courses and powerboat programs. Use World Sailing for international events, classes and racing rules.",
+      "career_stats": {
+        "pathways": "Tackers, dinghy, keelboat, windsurfing, powerboat, clubs, racing, volunteering, coaching",
+        "accessibility": "Sailability and inclusive club programs may support people with disability"
+      },
+      "accomplishments": [
+        "Useful for beginners, sailors, yacht clubs, volunteers, race officials, families and accessible-sport participants"
+      ],
+      "source_name": "Australian Sailing — Discover Sailing",
+      "source_url": "https://www.discoversailing.org.au/",
+      "last_verified": "2026-07-04"
     }
   ],
   "events": [
@@ -477,6 +539,237 @@
       "cta_label": "Visit World Wheelchair Rugby",
       "source_name": "World Wheelchair Rugby",
       "last_verified": "2026-06-30"
+    },
+    {
+      "id": "cricket-australia",
+      "name": "Cricket Australia",
+      "sport": "Cricket",
+      "level": "National governing body",
+      "region": "Australia",
+      "summary": "National body for cricket in Australia, linking fans and participants to official Australian cricket information and pathways.",
+      "participation_note": "Use this for official Australian cricket context, then follow Play Cricket to find local clubs, formats and entry points.",
+      "tags": [
+        "australia",
+        "cricket",
+        "national body",
+        "clubs",
+        "women and girls",
+        "juniors"
+      ],
+      "official_url": "https://www.cricket.com.au/",
+      "cta_label": "Open Cricket Australia",
+      "source_name": "Cricket Australia",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "play-cricket-australia",
+      "name": "Play Cricket Australia",
+      "sport": "Cricket",
+      "level": "Participation pathway",
+      "region": "Australia",
+      "summary": "Cricket Australia participation hub for finding ways to play cricket locally, socially or competitively.",
+      "participation_note": "Best first click for families, juniors, adults, social players and people looking for a nearby cricket club.",
+      "tags": [
+        "australia",
+        "cricket",
+        "find a club",
+        "social sport",
+        "juniors",
+        "community"
+      ],
+      "official_url": "https://play.cricket.com.au/",
+      "cta_label": "Find cricket near you",
+      "source_name": "Cricket Australia — Play Cricket",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "motorsport-australia",
+      "name": "Motorsport Australia",
+      "sport": "Motorsport",
+      "level": "National sporting authority",
+      "region": "Australia",
+      "summary": "Member-based organisation focused on development, regulation and administration of motorsport across Australia.",
+      "participation_note": "Useful for finding car clubs, getting started, licensing, officials pathways, women’s participation programs and event information.",
+      "tags": [
+        "australia",
+        "motorsport",
+        "motor racing",
+        "car clubs",
+        "licences",
+        "officials"
+      ],
+      "official_url": "https://motorsport.org.au/",
+      "cta_label": "Get started in motorsport",
+      "source_name": "Motorsport Australia",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "fia",
+      "name": "Fédération Internationale de l’Automobile (FIA)",
+      "sport": "Motorsport",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "Global governing body for motor sport and a federation for mobility organisations worldwide.",
+      "participation_note": "Good international reference for motorsport governance, championships, regulations, safety and global participation initiatives.",
+      "tags": [
+        "global",
+        "motorsport",
+        "motor racing",
+        "international federation",
+        "regulations",
+        "safety"
+      ],
+      "official_url": "https://www.fia.com/",
+      "cta_label": "Open FIA",
+      "source_name": "FIA",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "motorcycling-australia",
+      "name": "Motorcycling Australia",
+      "sport": "Motorcycle sport",
+      "level": "National governing body",
+      "region": "Australia",
+      "summary": "Australian body for motorcycle sport participation, events, officials, licences, rules and development pathways.",
+      "participation_note": "Useful for riders, clubs, families and volunteers looking for motorcycle racing disciplines or official roles.",
+      "tags": [
+        "australia",
+        "motorcycling",
+        "motor racing",
+        "clubs",
+        "licences",
+        "officials"
+      ],
+      "official_url": "https://www.ma.org.au/",
+      "cta_label": "Explore motorcycle sport",
+      "source_name": "Motorcycling Australia",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "karting-australia",
+      "name": "Karting Australia",
+      "sport": "Karting",
+      "level": "National governing body",
+      "region": "Australia",
+      "summary": "National body recognised to organise, regulate and control karting in Australia.",
+      "participation_note": "Great starter pathway for families and juniors interested in motor racing, with club, licence and beginner information.",
+      "tags": [
+        "australia",
+        "karting",
+        "motor racing",
+        "juniors",
+        "clubs",
+        "families"
+      ],
+      "official_url": "https://www.karting.net.au/",
+      "cta_label": "Start karting",
+      "source_name": "Karting Australia",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "australian-power-boat-association",
+      "name": "Australian Power Boat Association",
+      "sport": "Powerboat racing",
+      "level": "National governing body",
+      "region": "Australia",
+      "summary": "Australian organisation controlling, governing and administering competition powerboat racing and safety rules.",
+      "participation_note": "Relevant for people interested in high-speed water-based motor racing, clubs, events and safety rules.",
+      "tags": [
+        "australia",
+        "powerboat",
+        "motor racing",
+        "water sport",
+        "clubs",
+        "safety"
+      ],
+      "official_url": "https://www.ausapba.com.au/",
+      "cta_label": "Open APBA",
+      "source_name": "Australian Power Boat Association",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "australian-sailing",
+      "name": "Australian Sailing",
+      "sport": "Sailing / yachting",
+      "level": "National governing body",
+      "region": "Australia",
+      "summary": "National body for sailing in Australia, covering grassroots sailing through to high-performance Olympic sailing.",
+      "participation_note": "Best official Australian pathway for finding clubs, Discover Sailing Centres, courses, racing, coaching and officiating.",
+      "tags": [
+        "australia",
+        "sailing",
+        "yachting",
+        "clubs",
+        "learn to sail",
+        "olympic pathway"
+      ],
+      "official_url": "https://www.sailing.org.au/club-finder/",
+      "cta_label": "Find a sailing club",
+      "source_name": "Australian Sailing",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "discover-sailing-australia",
+      "name": "Discover Sailing Australia",
+      "sport": "Sailing / yachting",
+      "level": "Participation pathway",
+      "region": "Australia",
+      "summary": "Australian Sailing’s participation hub for learning to sail through programs such as Tackers, Dinghy, OutThere Sailing, Keelboat, Windsurfing and Powerboat.",
+      "participation_note": "Best first click for beginners, families, teenagers and adults who want a structured learn-to-sail or powerboat course.",
+      "tags": [
+        "australia",
+        "sailing",
+        "yachting",
+        "learn to sail",
+        "courses",
+        "powerboat"
+      ],
+      "official_url": "https://www.discoversailing.org.au/",
+      "cta_label": "Start sailing",
+      "source_name": "Australian Sailing — Discover Sailing",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "world-sailing",
+      "name": "World Sailing",
+      "sport": "Sailing / yachting",
+      "level": "International federation",
+      "region": "Global",
+      "summary": "International federation for sailing and global reference point for rules, events, classes, development and governance.",
+      "participation_note": "Useful for international context, racing rules, Olympic sailing pathways and links to member national authorities.",
+      "tags": [
+        "global",
+        "sailing",
+        "yachting",
+        "international federation",
+        "rules",
+        "events"
+      ],
+      "official_url": "https://www.sailing.org/",
+      "cta_label": "Open World Sailing",
+      "source_name": "World Sailing",
+      "last_verified": "2026-07-04"
+    },
+    {
+      "id": "sailability-australia-pathways",
+      "name": "Sailability accessible sailing pathways",
+      "sport": "Sailing / yachting",
+      "level": "Accessibility pathway",
+      "region": "Australia",
+      "summary": "Accessible sailing pathway information for people with disability, including Sailability programs and participating clubs around Australia.",
+      "participation_note": "Strong fit for the site mission: sailing can be recreational, social, therapeutic or competitive, with local support through accessible programs.",
+      "tags": [
+        "australia",
+        "sailing",
+        "yachting",
+        "disability sport",
+        "accessibility",
+        "inclusive sport"
+      ],
+      "official_url": "https://www.disabilitygateway.gov.au/node/5296",
+      "cta_label": "Find accessible sailing",
+      "source_name": "Australian Disability Gateway",
+      "last_verified": "2026-07-04"
     }
   ]
 }

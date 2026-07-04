@@ -56,6 +56,10 @@ terraform output -raw site_url
 - `events`: official event/milestone links attached to tournaments.
 - `players`: now used as pathway profiles for this POC, rather than celebrity/player stats.
 
+## Curated directory update
+
+This package expands the official body directory with Cricket Australia / Play Cricket, Motorsport Australia, FIA, Motorcycling Australia, Karting Australia, the Australian Power Boat Association, Australian Sailing / Discover Sailing, World Sailing, and accessible Sailability pathways.
+
 ## Commercial direction
 
 The POC includes sponsor slots but no live ad network code. That is deliberate. This keeps the first release clean and lets you define a sponsor policy before monetising.
