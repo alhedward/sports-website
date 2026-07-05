@@ -1,9 +1,0 @@
-LROC v3.4.32 — Inline Advert Fill Consistency
-Timestamp: 2026-06-16 22:27:30 AEST
-
-Continuation notes:
-- This is a narrow follow-up to v3.4.31 inline advert layout modes.
-- User observed TinyMCE showed the inserted advert filling the column while A4 preview / Issue Builder rendered it smaller.
-- v3.4.32 makes inline advert images fill their advert figure in editor, A4 preview, measurement, and Issue Builder render paths.
-- Insert advert now stores data-mag-advert-layout="full" by default; older inline adverts without a layout are normalised to full during save/preview.
-- Do not apply normal article image captions or fine borders to inline adverts.

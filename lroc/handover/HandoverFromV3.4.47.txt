@@ -1,7 +1,0 @@
-LROC handover from v3.4.47
-
-Baseline: v3.4.46 clean TinyMCE A4 composer branch.
-
-Change: fixed issue where generated article continuation pages could render half-width in Issue/Image Builder because stale destination page advert/panel slots were detected as fixed panels before resetPage=true replaced the page. mag340McePageSlot now only preserves panels that are explicitly marked for article-placement preservation, rather than using generic advert/sidebar labels to shrink the article text rectangle.
-
-Continue from here with TinyMCE A4 composer path. GrapesJS/Layout Lab is intentionally abandoned. Future planning note remains: printer export may need A3/imposition PDF path while editing stays A4.
