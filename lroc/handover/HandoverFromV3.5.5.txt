@@ -1,0 +1,12 @@
+LROC handover from v3.5.5
+
+Baseline: v3.5.5 — A4 Preview Browser Zoom Stabilisation
+
+This package continues from v3.5.4 and fixes a zoom-sensitive A4 preview bug: at browser zoom 90%, an advert that fitted in TinyMCE and in A4 preview at other zoom levels could disappear from the A4 preview.
+
+The A4 preview now uses a transform-scale wrapper instead of CSS zoom. This should make preview clipping more stable across browser zoom levels. TinyMCE editing, advert caption suppression, region-placement foundation, and Issue Builder placement are not intentionally changed.
+
+Continue testing:
+- Browser zoom 80/90/100/110/125% with same article.
+- Advert visible in TinyMCE, A4 preview, and Issue Builder.
+- v3.5.4 grey editor containment still holds.

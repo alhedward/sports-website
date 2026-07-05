@@ -1,0 +1,25 @@
+LROC Handover From v3.4.26 — Phantom Page Centreline Trim
+
+Current baseline: v3.4.26.
+
+Focus of this release:
+- The persistent phantom/ghost final article page is addressed at the clipped-window measurement layer.
+- The A4 preview and Issue Builder now use centre-point rect counting for text/media page-window stats.
+- This avoids treating a tiny edge intersection from a glyph/line/figure as content on the next article page.
+- The A4 preview also exposes renderer page-count diagnostics in a collapsible details block, so if the ghost remains the page stats can be read directly from the UI.
+
+Preserved behaviours:
+- Caption double-click editing.
+- Advert insertion without captions.
+- Manual image earlier/later controls.
+- Responsive Refresh A4 preview button.
+- Article placement status sync.
+- Article-chain locking.
+- LROC footer style.
+- Deploy helper v1.13 in lroc/deployer/deploy_helper.py.
+
+Testing notes:
+- Open/save the article once after deploy.
+- Refresh the A4 preview and inspect the page count.
+- Re-place the article fresh into Issue Builder so old generated page metadata is not reused.
+- If a phantom page remains, expand the A4 preview renderer diagnostics and capture the per-page stats for the final page.

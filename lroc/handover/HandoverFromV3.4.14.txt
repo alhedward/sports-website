@@ -1,0 +1,30 @@
+LROC Handover From v3.4.14
+Date: 2026-06-15 18:06 AEST
+
+Baseline package: v3.4.14 — Article Continuation Trim / Image Nudge Controls
+
+Current focus:
+- Magazine Article Library -> Issue Builder direct placement.
+- TinyMCE source article must keep semantic formatting, including lists and spans.
+- The renderer uses a native two-column CSS article sheet and creates clipped page windows for issue pages.
+- Existing LROC footer style must be retained.
+
+What changed in v3.4.14:
+- Kept the v3.4.13 caption controls.
+- Added an Image tools menu in the Article Library editor.
+- Selected images can now be nudged down/up in one-line increments.
+- The image nudge is stored as data-mag-image-nudge on the figure and is honoured by editor preview, pagination measurement and Issue Builder rendering.
+- Pagination now tries to trim a genuinely empty trailing continuation page by measuring the right edge of real rendered content instead of relying on multicolumn scrollWidth alone.
+
+Testing priorities:
+1. Open the repaired Article Library item with real list/font formatting.
+2. Confirm captions are edited via Caption or Image tools and filename captions stay hidden.
+3. Place the article fresh into Issue Builder.
+4. Confirm that if the article finishes on page 2, a page 3 is not assigned.
+5. Test Image tools -> Move selected image down/up one line and verify the rendered proof preview responds.
+6. Check bullet lists on the later article page if the source article contains real <ul>/<ol><li> markup.
+
+Known limitations / next likely work:
+- The image nudge is manual. It does not automatically solve all whitespace balancing.
+- If large white holes remain, next step should be a controlled magazine image placement model: top-of-column, after-heading, lower-column, full-width, and shrink percentage.
+- Avoid returning to the destructive explicit-column block packer from v3.4.7/v3.4.9; it damaged lists and worsened whitespace.

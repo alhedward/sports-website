@@ -1,0 +1,26 @@
+LROC Handover — v3.4.27
+
+Release: Scrooge Phantom Page Prune
+Timestamp: 2026-06-16 18:16:31 AEST
+
+Current focus
+-------------
+The article renderer has been battling a recurring phantom trailing page in both Article Library A4 preview and Issue Builder/Image Builder placement. v3.4.27 adds a final hard prune for generated TinyMCE article page candidates. This prune only targets trailing page 3+ candidates so real two-page articles are preserved while empty/duplicate terminal windows are discarded before placement.
+
+Key retained behaviours
+-----------------------
+- Caption double-click editing works and should be preserved.
+- Insert Advert must not create captions.
+- Manual image earlier/later controls are retained.
+- A4 preview refresh is responsive.
+- Article placement status sync is present.
+- If page 1 of a generated article is locked, generated continuation pages should inherit the lock.
+- Deploy helper v1.13 quick prompt is included in lroc/deployer.
+
+Implementation note
+-------------------
+The new Scrooge trim collects text samples and page statistics from clipped page windows. It drops trailing page 3+ candidates if they look like tiny spill, low-value terminal noise, or a duplicate replay of page 1 text. Stale manual page-break markers no longer force the minimum generated page count.
+
+Next test
+---------
+Deploy, open/save the article once, refresh A4 preview, and place fresh into Issue Builder. The gearbox article should produce only the meaningful pages and not retain a trailing Tiny Tim ghost page.

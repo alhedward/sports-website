@@ -1,0 +1,17 @@
+LROC handover from v3.4.22
+==========================
+
+Current status
+--------------
+The article renderer is still on the native CSS multicolumn/windowed article path. Caption handling from v3.4.13 is retained and working. Insert Advert caption suppression from v3.4.20 is retained. The Refresh A4 preview button remains responsive.
+
+v3.4.22 targets the remaining phantom continuation page seen in both the Article Library A4 preview and Issue/Image Builder after v3.4.21. The fix changes measurement so text contribution is prorated by the visible clipped rectangle area. This prevents a tiny sliver from a previous page's paragraph/list from counting as a real final page. Once the clipped-window page pass sees more than one real page, it becomes the final trim authority. The older block and scroll-width estimates are now fallback only when the clipped-window pass under-reads and reports a single page.
+
+The repo also now includes deploy helper v1.13 in lroc/deployer/deploy_helper.py. The helper's Latest package picker can double-click/select/Enter a package and immediately show the normal deploy Yes/No confirmation, while leaving the Deploy button available if No is chosen.
+
+Next likely work
+----------------
+- Verify the A4 preview and Issue/Image Builder now show only the meaningful article pages after the offending image is manually moved.
+- Verify normal image captions still render and Insert Advert still has no caption.
+- Verify deploy helper quick-prompt behaviour after selecting a package from Latest.
+- Later, consider image layout modes: full-column, float-left, float-right, reset. Do not start this until the page-count path is stable.

@@ -1,0 +1,86 @@
+project_name          = "lroc"
+aws_region            = "ap-southeast-2"
+hosted_zone_name      = "vk2ale.com"
+site_domain           = "lroc.vk2ale.com"
+cognito_domain_prefix = "lroc-members-demo"
+
+# Optional overrides
+# cloudfront_price_class    = "PriceClass_100"
+# site_bucket_name          = "lroc-site-123456789012"
+# member_files_bucket_name  = "lroc-member-files-123456789012"
+# subject_alternative_names = ["www.lroc.vk2ale.com"]
+# callback_urls             = ["https://lroc.vk2ale.com/members.html", "http://localhost:8000/members.html"]
+# logout_urls               = ["https://lroc.vk2ale.com/members.html", "http://localhost:8000/members.html"]
+# allowed_origins           = ["https://lroc.vk2ale.com", "http://localhost:8000"]
+
+# SES / club mail
+# ses_email_domain              = "lroc.vk2ale.com"
+# ses_from_email               = "no-reply@lroc.vk2ale.com"
+# ses_reply_to_email           = "tonyedward295@gmail.com"
+# ses_mail_from_subdomain      = "mail"
+# ses_configuration_set_name   = "lroc-club-mail"
+# enable_article_notifications = true
+# enable_event_reminders       = true
+# System email guardrails. Leave mode as "test" while SES/domain migration is being tested.
+# In test mode, scheduled/member lifecycle emails only go to the allow-list below.
+# system_email_mode = "test" # off | test | live
+# system_email_test_recipients = ["you@example.com"]
+# system_email_require_cognito_presence = true
+# club_time_zone               = "Australia/Sydney"
+# event_reminder_lookahead_days = 2
+# event_reminder_schedule_expression = "cron(0 9 * * ? *)"
+# event_reminder_schedule_timezone  = "Australia/Sydney"
+# enable_vehicle_registration_push_reminders = true
+# vehicle_registration_reminder_months_before = 1
+# vehicle_registration_final_notice_months_after = 3
+# vehicle_registration_final_notice_text = "This vehicle appears to have been unregistered for 3 months. You may need a new pink slip for historic registration, or for classic registration, a new blue slip before re-registering. Registration plates must be surrendered to the Motor Registry office if registration is not renewed within 3 months of expiry."
+# enable_historic_registration_reminders = true
+# historic_rego_update_reminder_months_after = 1
+# historic_rego_renewal_notice_text = "Your Historic / Classic registration renewal is approaching. Please use the LROC Vehicle Registration page to submit your inspection certificate and the required vehicle photos to the Historic Registrar."
+# vehicle_registration_reminder_schedule_expression = "cron(15 9 * * ? *)"
+# vehicle_registration_reminder_schedule_timezone  = "Australia/Sydney"
+
+# Role-based webmail / SES inbound
+# enable_webmail = true
+# webmail_inbound_domain = "" # defaults to ses_email_domain, e.g. lroc.vk2ale.com
+# create_webmail_inbound_txt = false
+# webmail_inbound_recipients = []
+# webmail_unmatched_mailbox_address = "unmatched@mail.lroc.vk2ale.com"
+# webmail_unmatched_position_ids = ["president", "webmaster"]
+# webmail_spam_retention_days = 30
+# webmail_spam_purge_schedule_expression = "cron(30 3 * * ? *)"
+# webmail_spam_purge_schedule_timezone = "Australia/Sydney"
+# webmail_max_attachment_bytes = 52428800
+# webmail_max_total_attachment_bytes = 52428800
+# enable_webmail_attachment_malware_protection = false # Set true to enable GuardDuty Malware Protection for S3 on webmail attachments.
+# webmail_trust_ses_virus_scan = true # Used only when GuardDuty attachment scanning is disabled.
+# presentations_inbound_local_parts = ["presentation", "presentations"]
+
+# Geoapify maps/geocoding for the Trips & Events admin pin-drop tool
+# Prefer these correctly-spelled names. The misspelled geoaplify_* aliases are also accepted for existing local tfvars.
+# geoapify_maptiles_api_key   = "REPLACE_WITH_GEOAPIFY_MAP_TILES_KEY"
+# geoapify_geocoding_api_key  = "REPLACE_WITH_GEOAPIFY_GEOCODING_KEY" # optional; blank reuses maptiles key
+# geoapify_maptiles_url_template = "https://maps.geoapify.com/v1/tile/carto/{z}/{x}/{y}.png?&apiKey={apiKey}"
+# geoapify_geocoding_url      = "https://api.geoapify.com/v1/geocode/search"
+# enable_lroc_monthly_meetings = true
+
+
+push_vapid_public_key  = "REPLACE_WITH_YOUR_GENERATED_VAPID_PUBLIC_KEY"
+push_vapid_private_key = "REPLACE_WITH_YOUR_GENERATED_VAPID_PRIVATE_KEY"
+push_vapid_subject     = "mailto:REPLACE_WITH_A_REAL_CONTACT_EMAIL"
+
+# OpenAI Vehicle Help prototype
+# Terraform creates /lroc/openai/api_key as SSM SecureString and /lroc/openai/model as SSM String.
+# Do not commit real values.
+# openai_api_key = "REPLACE_WITH_OPENAI_API_KEY"
+# openai_model   = "gpt-5-mini"
+
+# Vehicle Help web search for parts-number requests without a verified parts record.
+openai_web_search_enabled      = true
+openai_web_search_context_size = "low"
+
+# LROC browser meetings / Amazon Chime SDK
+# enable_chime_meetings = true
+# chime_media_region = "ap-southeast-2"
+# chime_meeting_launch_position_ids = ["president", "vice-president", "secretary", "treasurer"]
+# chime_default_meeting_title = "LROC online meeting"

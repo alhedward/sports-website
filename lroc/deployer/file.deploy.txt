@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Package deploy script. Place this as lroc/file.deploy.txt or sgars/file.deploy.txt.
+# deploy_helper.py replaces:
+# {{PACKAGE_PATH}}
+# {{EXTRACT_DIR}}
+# {{SOURCE_SITE_DIR}}
+# {{DEST_PARENT_DIR}}
+# {{DEST_SITE_DIR}}
+# {{SITE_NAME}}
+# {{COMMIT_MESSAGE}}
+
+echo "== Deploying {{SITE_NAME}} from {{PACKAGE_PATH}} =="
+echo "Source: {{SOURCE_SITE_DIR}}"
+echo "Dest:   {{DEST_SITE_DIR}}"
+
+# Safe copy: do not add rsync delete options here.
+rsync -a \
+  --exclude '.terraform/' \
+  --exclude 'terraform.tfstate' \
+  --exclude 'terraform.tfstate.backup' \
+  "{{SOURCE_SITE_DIR}}/" "{{DEST_SITE_DIR}}/"
+
+cd "{{DEST_PARENT_DIR}}"
+
+echo "== Validation =="
+if [ -f "{{SITE_NAME}}/lambda/member_files.py" ]; then
+  python3 -m py_compile "{{SITE_NAME}}/lambda/member_files.py"
+fi
+if [ -f "{{SITE_NAME}}/lambda/magazine_api.py" ]; then
+  python3 -m py_compile "{{SITE_NAME}}/lambda/magazine_api.py"
+fi
+node --check "{{SITE_NAME}}/site/app.js"
+node --check "{{SITE_NAME}}/site/service-worker.js"
+if [ -f "{{SITE_NAME}}/site/expo/expo.js" ]; then node --check "{{SITE_NAME}}/site/expo/expo.js"; fi
+if [ -f "{{SITE_NAME}}/site/assets/vendor/amazon-chime-sdk-js-3.30.0.bundle.js" ]; then node --check "{{SITE_NAME}}/site/assets/vendor/amazon-chime-sdk-js-3.30.0.bundle.js"; fi
+if command -v terraform >/dev/null 2>&1 && [ -d "{{SITE_NAME}}/terraform" ]; then cd "{{DEST_PARENT_DIR}}/{{SITE_NAME}}/terraform" && terraform fmt && cd "{{DEST_PARENT_DIR}}"; fi
+
+git status
+git add "{{SITE_NAME}}/VERSION" "{{SITE_NAME}}/lambda" "{{SITE_NAME}}/site" "{{SITE_NAME}}/terraform" "{{SITE_NAME}}/file.deploy.txt"
+git status
+git commit -m "{{COMMIT_MESSAGE}}"
+git push

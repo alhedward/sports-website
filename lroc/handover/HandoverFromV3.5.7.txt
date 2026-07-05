@@ -1,0 +1,25 @@
+LROC v3.5.7 handover
+
+Focus: Front cover undo safety and full-width bar layout.
+
+Baseline before this was v3.5.6 — Front Cover Live Preview. Continue from v3.5.7 unless Tony says otherwise.
+
+Changes:
+- Added an in-editor front-cover revert stack. Presets, format-style changes, manual field edits and bar up/down moves can now be reverted through previous cover states.
+- Revert is an editor safety feature; it does not change persisted data until Save cover layers is clicked.
+- Top and bottom cover bars now render full width across the cover instead of pill-shaped inset banners.
+- Top and bottom bars have editable vertical position percent controls plus Up/Down buttons.
+- Bottom bar is now a 1-over-2 layout:
+  - top row: full width, centred
+  - second row: two equal cells, each centred
+- Bottom bar has three editable text values:
+  - top row text
+  - site URL / left cell
+  - Facebook URL / right cell
+- Bottom bar has separate top-row point size and one shared point size for both second-row cells.
+- If both second-row cells are blank, the top row is vertically centred in the bottom bar.
+- Existing saved bottomBannerText is treated as the new bottom top-row text; existing siteUrl is used as the lower-left cell.
+
+Regression notes:
+- No intentional Article Library, A4 composer, advert rendering, Issue Builder, deploy helper, or lambda changes.
+- Keep GrapesJS/Layout Lab abandoned.

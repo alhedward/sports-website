@@ -1,0 +1,29 @@
+LROC Handover — v3.4.16 Phantom Page Exorcist
+================================================
+
+Release focus
+-------------
+This release is a narrow follow-up to v3.4.15. Captions and manual image movement are left intact. The focus is the phantom final TinyMCE article continuation page and misleading Article Library editor page guide markers.
+
+What changed
+------------
+- The multicolumn article page-count logic now uses actual text Range rectangles and real media/table rectangles to decide which page windows contain meaningful content.
+- Broad text element rectangles are no longer allowed to create a false final page, because they can span into an empty multicolumn window even when no glyphs are present there.
+- The trailing page threshold was tightened so tiny slivers do not create an Issue Builder continuation page.
+- The Article Library TinyMCE horizontal page guide overlay has been disabled. The separate A4 layout preview panel remains available, but the in-editor markers were too inaccurate to be useful.
+- Existing caption behaviour from v3.4.13 is preserved, including double-click caption editing and suppression of filename-style captions.
+- Manual image flow controls from v3.4.15 are preserved.
+
+Testing priorities
+------------------
+1. Place the repaired Article Library article fresh into Issue Builder.
+2. Confirm that the manually moved image layout still looks good.
+3. Confirm that a phantom third page is no longer assigned when page 2 contains the article end.
+4. Confirm captions still render correctly in Issue Builder preview.
+5. Confirm the Article Library TinyMCE editor no longer shows misleading horizontal page guide markers.
+
+Known notes
+-----------
+- Existing placed pages from earlier versions can contain stale page-window metadata. Re-place the article after deployment.
+- Do not reintroduce the explicit-column/list-fragment packer from v3.4.7/v3.4.9.
+- Keep the LROC footer style.

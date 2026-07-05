@@ -1,0 +1,15 @@
+LROC handover from v3.5.2
+
+Baseline: v3.5.1 plus Article Library blank-line preservation.
+
+Important: TinyMCE intentional blank paragraphs are now normalised to
+<p class="mag-blank-line" data-mag-blank-line="1">&nbsp;</p>. Do not remove
+these during HTML cleanup; they are meaningful article spacing and must render in
+A4 preview and Issue Builder.
+
+Keep intact:
+- TinyMCE A4 composer path.
+- Caption placeholder removal; no "Caption optional" placeholder.
+- Region placement foundation from v3.5.0.
+- Advert artwork/no-caption rules.
+- Deployer in lroc/deployer.

@@ -1,0 +1,35 @@
+LROC Handover From v3.4.12
+===========================
+
+Release: v3.4.12 — Article Continuation Window Fix
+Timestamp: 2026-06-14 AEST
+
+Context
+-------
+The Article Library source formatting had been repaired by the user, and v3.4.11 restored the article to the expected three-page count while retaining font formatting. However, every generated continuation page still displayed the first page of the article.
+
+Cause addressed
+---------------
+The renderer was using a CSS multi-column window strategy: every generated page stores the full article HTML and displays a clipped horizontal window into the flowed article sheet. If the preview/editor round-trip lost `mcePaginationMode` or `mcePageOffsetXPx`, later pages fell back to offset 0, which renders page 1 repeatedly.
+
+What changed
+------------
+- The preview renderer now treats a multi-page TinyMCE article carrying the full article HTML as a windowed article even if the mode flag is missing.
+- The page X offset is reconstructed from `mcePageIndex` or the generated `mce_article_page_N` slot id when the stored offset is missing/zero.
+- The visible page window now uses `transform: translateX(...)` instead of relying on a negative `left` value.
+- The v3.4.11 list-marker fallback and TinyMCE HTML preservation path remain in place.
+
+Testing guidance
+----------------
+After deploying v3.4.12, re-place the repaired Article Library article fresh. Do not judge using pages generated/saved under v3.4.10 or v3.4.11 because their metadata may already have zero/incorrect continuation offsets.
+
+Expected result
+---------------
+- Three generated article pages for the Td5 gearbox article test case.
+- Page 1, page 2, and page 3 each show their own continuation window, not page 1 repeated.
+- Font formatting remains retained.
+- Bullets should render if the Article Library source contains real list markup.
+
+Next likely work
+----------------
+Once continuation windows are stable, return to whitespace reduction. Avoid reviving the destructive block-fragment packer from v3.4.7/v3.4.9; it broke lists and made whitespace worse. Prefer a measured renderer that preserves semantic HTML and only adjusts image caps/placement in controlled ways.

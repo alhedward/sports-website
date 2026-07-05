@@ -1,0 +1,27 @@
+LROC Handover From v3.4.28
+Timestamp: 2026-06-16 18:27:55 AEST
+
+Current state:
+- The Article Library caption double-click path is confirmed working and should be preserved.
+- Insert Advert should not create or show captions; v3.4.20+ behaviour should be preserved.
+- Manual image earlier/later article-flow controls are useful for final layout cleanup and should be preserved.
+- A4 preview refresh is responsive and should be preserved.
+- The top Magazine Production overview cards were removed from the main screen in v3.4.28.
+
+v3.4.28 changes:
+- A4 preview diagnostics are always visible below the preview header.
+- Diagnostics now include final count, clipped-window count, preliminary count, post-candidate Scrooge count and per-window stats.
+- Hidden measurement windows were moved from far-offscreen fixed positioning to invisible in-page measurement to avoid under-reading CSS multicolumn continuation windows.
+- Added final post-candidate trailing-page pruning so blank terminal article-page candidates can be removed after generation.
+
+Known active issue to verify:
+- The persistent phantom/ghost page in A4 preview and Issue Builder must be retested. If it persists, use the visible diagnostics panel and capture the JSON block. The most useful fields are finalPageCount, clippedWindowMeaningfulPageCount, scroogePostCandidatePageCount, conservativeNonWindowPageCount and windowPageStats.
+
+Testing instructions:
+1. Deploy v3.4.28.
+2. Open the article in Article Library.
+3. Save once.
+4. Click Refresh A4 preview.
+5. Confirm whether page 3 remains.
+6. If it remains, expand/copy the Renderer page-count diagnostics.
+7. Re-place the article fresh into Issue Builder and confirm whether page 3 is assigned.

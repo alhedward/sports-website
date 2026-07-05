@@ -1,0 +1,40 @@
+LROC Handover — v3.4.5 Article Renderer Restoration
+Timestamp: 2026-06-14 12:08 AEST
+
+Current baseline:
+- Version: 3.4.5
+- Package purpose: restore TinyMCE article rendering in Issue Builder after v3.4.4 could blank generated article pages.
+
+What happened:
+- v3.4.3 generated multiple TinyMCE article pages but allowed the external Article Library title/header to repeat and could lose continuation-page fragments when controls were rebuilt/saved.
+- v3.4.4 attempted to preserve page fragments but was too narrow: generated article pages could lose the specific fragment payload during Issue Builder preview/editor refreshes, causing blank article rendering.
+- v3.4.5 carries a hidden structured MCE payload through the slot editor so the preview/save path keeps page-specific articlePageHtml plus full articleHtml and pagination geometry.
+
+Important implementation notes:
+- Generated article pages use templateId: mce_article_page and renderMode: mce_article_page.
+- The Issue Builder preview branch now merges def + value before rendering MCE pages.
+- The slot editor now includes a hidden JSON payload data-mag-slot-mce-payload for MCE article pages.
+- magazineReadSlotLayoutFromEditor parses that hidden payload and preserves it through save/preview refresh.
+- The render-mode select now includes mce_article_page explicitly.
+- Whitespace-only text/header overrides are still treated as blank.
+- Repeated external Article Library slot titles remain suppressed for mce_article_page.
+
+Test plan:
+1. Deploy with deploy_helper.py and confirm package file.deploy.txt is used.
+2. Hard refresh / service worker update.
+3. Create or open an issue.
+4. Re-place a TinyMCE Article Library article into Issue Builder from a fresh starting page.
+5. Confirm all generated pages render.
+6. Click page 2 / page 3, toggle proof/editor view, edit optional header override, save layout, and confirm each page keeps its own fragment.
+7. Confirm the external Article Library title does not repeat above generated article pages.
+
+Known next work:
+- Improve bottom-fill/column balancing around large figures.
+- Add deliberate image placement controls for article renderer pages.
+- Make generated article pages immutable render artifacts once the visual model is stable.
+- Later: PDF export and merge pipeline.
+
+Deploy metadata:
+- lroc/file.deploy.txt remains the package deploy script for deploy_helper.py.
+- The deploy helper replaces {{COMMIT_MESSAGE}} and other placeholders.
+- Do not add rsync --delete.

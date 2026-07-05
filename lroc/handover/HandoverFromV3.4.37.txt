@@ -1,0 +1,15 @@
+LROC handover from v3.4.37
+
+Current focus: article/ad placement refinement after MCE article renderer stabilisation.
+
+User-reported fixes in this package:
+- Insert Advert artwork must be treated as finished artwork: no caption, no border, no article-image surround, full-column fill when layout is full.
+- Retired default note slots such as Sidebar / pull quote / advert note should not appear in the placement UI.
+- Generated TinyMCE article continuation pages in Issue/Image Builder must fill the A4 page slot, not render as a small top-left sheet.
+
+Keep intact:
+- A4 phantom page prune from v3.4.28.
+- Caption double-click for article images.
+- Advert caption suppression.
+- Article image float/fine border controls for normal article images only.
+- Deploy helper v1.14 auto-refresh in lroc/deployer/deploy_helper.py.

@@ -1,0 +1,16 @@
+LROC handover from v3.4.21
+==========================
+
+Current status
+--------------
+The article renderer is using the native CSS multicolumn/windowed article path. Caption handling from v3.4.13 is working well, advert caption suppression from v3.4.20 is retained, and the Refresh A4 preview button remains responsive.
+
+v3.4.21 specifically fixes a v3.4.20 regression where the clipped-window meaningful-page test under-read continuation pages and caused both the A4 preview and Issue Builder placement to show only page 1. The page count now uses clipped-window measurement as a trailing ghost-page trim signal, while retaining continuation pages when the block estimator plus column/content measurements agree that content continues beyond page 1.
+
+It also removes empty inline advert figure wrappers left by TinyMCE after an inserted advert is deleted.
+
+Next likely work
+----------------
+- Verify A4 preview shows the same meaningful page count as Issue Builder for the repaired article.
+- Verify no phantom final page is created after moving the offending image.
+- Consider image layout modes later: full-column, float-left, float-right, reset. Do not start this until the page-count path is stable.

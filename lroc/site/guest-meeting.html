@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LROC | Guest Meeting</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="theme-color" content="#143b2d">
+</head>
+<body data-page="guest-meeting">
+  <main class="guest-meeting-shell">
+    <section class="card card-pad guest-meeting-card">
+      <div class="eyebrow">LROC guest meeting</div>
+      <h1>Request to join the meeting</h1>
+      <p class="muted">Guests can request entry and wait for the meeting host to admit them. Guest access is for audio/video only and does not provide member access or voting rights.</p>
+      <div id="guestMeetingStatus" class="notice">Enter your name and request entry.</div>
+      <div id="guestRequestForm" class="form-grid compact-grid">
+        <div class="field"><label>Your name</label><input id="guestName" autocomplete="name" required></div>
+        <div class="field"><label>Email, optional</label><input id="guestEmail" type="email" autocomplete="email"></div>
+        <div class="field"><label>Notes, optional</label><input id="guestNotes" placeholder="Organisation / who invited you"></div>
+        <div class="field"><label>&nbsp;</label><button class="button" id="guestRequestBtn" type="button">Request entry</button></div>
+      </div>
+      <div id="guestWaitingPanel" class="hidden">
+        <p class="muted">Waiting for the host to admit you…</p>
+        <button class="button secondary" id="guestCheckBtn" type="button">Check status</button>
+      </div>
+      <div id="guestJoinPanel" class="hidden">
+        <button class="button" id="guestJoinBtn" type="button">Join audio/video</button>
+        <button class="button secondary" id="guestMuteBtn" type="button" disabled>Mute/unmute</button>
+        <button class="button secondary" id="guestVideoBtn" type="button" disabled>Camera on/off</button>
+        <button class="button ghost" id="guestLeaveBtn" type="button" disabled>Leave</button>
+      </div>
+      <audio id="guestMeetingAudio" autoplay></audio>
+      <div class="chime-stage-card guest-stage-card">
+        <div class="chime-video-grid" id="guestVideoGrid">
+          <div class="chime-video-tile local"><video id="guestLocalVideo" autoplay muted playsinline></video><div class="chime-video-label">You</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script>
+    window.global = window.global || window;
+    window.globalThis = window.globalThis || window;
+    window.process = window.process || { env: { NODE_ENV: 'production' }, browser: true };
+    window.process.env = window.process.env || { NODE_ENV: 'production' };
+    window.lrocChimeSdkLoadError = '';
+    window.lrocChimeSdkBundleFailed = function () { window.lrocChimeSdkLoadError = 'Local Amazon Chime SDK bundle could not be loaded.'; };
+  </script>
+  <script src="assets/vendor/amazon-chime-sdk-js-3.30.0.bundle.js?v=3.0.55" onerror="window.lrocChimeSdkBundleFailed && window.lrocChimeSdkBundleFailed()"></script>
+  <script>
+  const guestState = { token: localStorage.getItem('lrocGuestMeetingToken') || '', session: null, audioVideo: null, muted: true, videoOn: false, poll: null };
+  const apiBase = () => String(window.LROC_MEMBER_API?.baseUrl || '').replace(/\/$/, '');
+  function $(id){ return document.getElementById(id); }
+  function setStatus(text, kind='notice'){ const el=$('guestMeetingStatus'); if(el){ el.className=kind; el.textContent=text; } }
+  function show(id, visible){ const el=$(id); if(el) el.classList.toggle('hidden', !visible); }
+  async function api(path, options={}){
+    const res = await fetch(apiBase()+path, { ...options, headers: { 'content-type': 'application/json', ...(options.headers||{}) }});
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
+    return data;
+  }
+  function chimeSdkGlobal(){ return [window.ChimeSDK, window.chimeSDK, window.amazonChimeSDK, window.AmazonChimeSDK, window.amazon_chime_sdk_js].find(sdk => sdk && sdk.ConsoleLogger && sdk.DefaultMeetingSession && sdk.MeetingSessionConfiguration); }
+  async function ensureSdk(){ const sdk=chimeSdkGlobal(); if(sdk) return sdk; if(window.lrocChimeSdkLoadError) throw new Error(window.lrocChimeSdkLoadError); for(let i=0;i<80;i++){ await new Promise(r=>setTimeout(r,125)); const s=chimeSdkGlobal(); if(s) return s; } throw new Error('Amazon Chime SDK did not load.'); }
+  async function requestEntry(){
+    const guest_name=$('guestName').value.trim();
+    if(!guest_name){ setStatus('Enter your name first.', 'notice warning'); return; }
+    const data = await api('/guest/chime/request', { method:'POST', body: JSON.stringify({ guest_name, guest_email:$('guestEmail').value.trim(), notes:$('guestNotes').value.trim() }) });
+    guestState.token = data.guest_token; localStorage.setItem('lrocGuestMeetingToken', guestState.token);
+    setStatus(data.message || 'Request sent. Waiting for host admission.', 'notice success');
+    show('guestRequestForm', false); show('guestWaitingPanel', true); startPolling();
+  }
+  async function checkStatus(){
+    if(!guestState.token){ return; }
+    const data = await api(`/guest/chime/status?token=${encodeURIComponent(guestState.token)}`);
+    const status = data.guest?.status || 'waiting';
+    if(data.guests_allowed === false) { setStatus(data.guest_policy_message || 'Guests are not permitted for this meeting type.', 'notice warning'); show('guestWaitingPanel', false); show('guestJoinPanel', false); return; }
+    if(status === 'admitted') { setStatus('You have been admitted. You may join audio/video.', 'notice success'); show('guestWaitingPanel', false); show('guestJoinPanel', true); }
+    else if(status === 'joined') { setStatus('You are joined to the meeting.', 'notice success'); show('guestWaitingPanel', false); show('guestJoinPanel', true); }
+    else if(status === 'denied') { setStatus('The host did not admit this guest request.', 'notice warning'); show('guestWaitingPanel', false); }
+    else if(status === 'ended') { setStatus('The meeting is no longer active.', 'notice warning'); show('guestWaitingPanel', false); }
+    else { setStatus('Waiting for the host to admit you…', 'notice'); show('guestWaitingPanel', true); }
+  }
+  function startPolling(){ if(guestState.poll) clearInterval(guestState.poll); guestState.poll=setInterval(()=>checkStatus().catch(()=>{}), 4000); checkStatus().catch(err=>setStatus(err.message,'notice warning')); }
+  async function joinMeeting(){
+    const sdk = await ensureSdk();
+    const data = await api('/guest/chime/join', { method:'POST', body: JSON.stringify({ guest_token: guestState.token }) });
+    const logger = new sdk.ConsoleLogger('LROCGuestChime', sdk.LogLevel.INFO);
+    const deviceController = new sdk.DefaultDeviceController(logger);
+    const config = new sdk.MeetingSessionConfiguration(data.meeting, data.attendee);
+    const session = new sdk.DefaultMeetingSession(config, logger, deviceController);
+    const av = session.audioVideo; guestState.session=session; guestState.audioVideo=av;
+    av.bindAudioElement($('guestMeetingAudio'));
+    av.addObserver({ videoTileDidUpdate: tileState => { if(!tileState.boundAttendeeId || tileState.tileId == null) return; if(tileState.localTile){ av.bindVideoElement(tileState.tileId, $('guestLocalVideo')); } else { const v=document.createElement('video'); v.autoplay=true; v.playsInline=true; const w=document.createElement('div'); w.className='chime-video-tile'; const l=document.createElement('div'); l.className='chime-video-label'; l.textContent='Meeting participant'; w.appendChild(v); w.appendChild(l); $('guestVideoGrid').appendChild(w); av.bindVideoElement(tileState.tileId, v); } } });
+    try { const devices = await av.listAudioInputDevices(); if(devices[0]) await av.startAudioInput(devices[0].deviceId); } catch(e) { console.warn(e); }
+    av.start(); try{ av.realtimeMuteLocalAudio(); }catch{}
+    $('guestMuteBtn').disabled=false; $('guestVideoBtn').disabled=false; $('guestLeaveBtn').disabled=false; $('guestJoinBtn').disabled=true;
+    setStatus('Joined. Microphone starts muted.', 'notice success');
+  }
+  async function toggleMute(){ const av=guestState.audioVideo; if(!av) return; if(guestState.muted){ av.realtimeUnmuteLocalAudio(); guestState.muted=false; } else { av.realtimeMuteLocalAudio(); guestState.muted=true; } }
+  async function toggleVideo(){ const av=guestState.audioVideo; if(!av) return; if(guestState.videoOn){ av.stopLocalVideoTile(); await av.stopVideoInput(); guestState.videoOn=false; } else { const devices=await av.listVideoInputDevices(); if(devices[0]) await av.startVideoInput(devices[0].deviceId); av.startLocalVideoTile(); guestState.videoOn=true; } }
+  function leave(){ try{ guestState.audioVideo?.stop(); }catch{} localStorage.removeItem('lrocGuestMeetingToken'); guestState.token=''; setStatus('You have left the guest meeting.', 'notice'); $('guestJoinBtn').disabled=false; $('guestMuteBtn').disabled=true; $('guestVideoBtn').disabled=true; $('guestLeaveBtn').disabled=true; }
+  $('guestRequestBtn').addEventListener('click', ()=>requestEntry().catch(err=>setStatus(err.message,'notice warning')));
+  $('guestCheckBtn').addEventListener('click', ()=>checkStatus().catch(err=>setStatus(err.message,'notice warning')));
+  $('guestJoinBtn').addEventListener('click', ()=>joinMeeting().catch(err=>setStatus(err.message,'notice warning')));
+  $('guestMuteBtn').addEventListener('click', ()=>toggleMute().catch(err=>setStatus(err.message,'notice warning')));
+  $('guestVideoBtn').addEventListener('click', ()=>toggleVideo().catch(err=>setStatus(err.message,'notice warning')));
+  $('guestLeaveBtn').addEventListener('click', leave);
+  if(guestState.token){ show('guestRequestForm', false); show('guestWaitingPanel', true); startPolling(); }
+  </script>
+</body>
+</html>

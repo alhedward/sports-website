@@ -1,0 +1,35 @@
+LROC Magazine / Article Renderer Handover
+Generated: 2026-06-20 AEST
+Baseline: v3.5.8 — Front Cover Shared Banner Opacity
+
+Latest package:
+  lroc-front-cover-shared-banner-opacity-v3.5.8-2026-06-20-181958-AEST.tar.gz
+
+Continue from v3.5.8 unless Tony says otherwise.
+
+What changed in v3.5.8:
+  - Added one shared opacity percentage control for the top and bottom front-cover bars.
+  - 100% = solid banner background/chrome.
+  - Lower percentages make only the banner background/chrome translucent.
+  - Text remains fully opaque/readable.
+  - Existing separate top/bottom background colour controls remain.
+  - Front-cover live preview continues to update immediately.
+  - Front-cover revert stack from v3.5.7 remains available.
+  - Save behaviour unchanged.
+
+Important front-cover model as of v3.5.8:
+  - Top and bottom bars are full-width cover bars.
+  - Both bars can be moved up/down.
+  - Bottom bar layout is row 1 full-width centred, row 2 split into two centred cells.
+  - Bottom top row has its own font size.
+  - Bottom row-2 cells share one font size.
+  - If both row-2 cells are blank, the top row vertically centres in the bottom bar.
+  - Shared banner opacity affects both top and bottom bar background/chrome only.
+
+Preserve:
+  - GrapesJS/Layout Lab remains abandoned.
+  - TinyMCE Article Library workflow remains the path forward.
+  - No Caption optional placeholders.
+  - Adverts should not gain captions or borders.
+  - AEST package naming.
+  - Short package replies unless there is something unusual.

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "event_types": {
+    "Social": { "ratings": [] },
+    "Touring": { "ratings": [] },
+    "4WD": { "ratings": ["Easy", "Medium", "Hard", "Extreme"] }
+  }
+}

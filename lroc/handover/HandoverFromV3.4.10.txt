@@ -1,0 +1,33 @@
+LROC handover from v3.4.10 — Article Renderer Column Reset
+Timestamp: 2026-06-14 15:29:03 AEST
+
+Baseline:
+- v3.4.8 integrated the deploy helper under lroc/deployer.
+- v3.4.9 attempted no-blank behaviour with explicit columns, but testing showed bullets still missing and whitespace worse.
+
+Important lesson:
+- Do not keep building on the v3.4.7/v3.4.9 destructive block packer.
+- Splitting list HTML and rebuilding explicit columns is too fragile for TinyMCE article content.
+- The target article body flow is represented by the user's td5_gearbox_article_A4_2column_no_blank PDF: dense two-column body flow, visible bullets, images allowed to scale/move, and LROC's own footer retained.
+
+v3.4.10 approach:
+- Preserve original TinyMCE HTML rather than splitting it into one-off list/body fragments.
+- Generate issue pages as clipped windows across a native CSS multi-column article sheet.
+- Use scroll-width/heuristic estimation to create the needed number of issue pages.
+- Store full article HTML in each article page slot, with mcePageOffsetXPx selecting the visible window.
+- Add CSS max-height control for images so oversized images do not dominate a column.
+
+Files touched:
+- lroc/site/app.js
+- lroc/site/styles.css
+- lroc/site/service-worker.js
+- lroc/VERSION
+- lroc/changelog/changelog_3.4.10.md
+- lroc/handover/HandoverFromV3.4.10.txt
+
+Next work:
+- If whitespace remains, add explicit article image controls rather than rewriting text flow:
+  - image size presets per figure;
+  - allow image before/after heading;
+  - allow image to float top/bottom of current or next column;
+  - diagnostics for column occupancy per page.

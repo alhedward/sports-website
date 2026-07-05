@@ -1,0 +1,12 @@
+LROC handover from v3.4.46
+
+Baseline: clean v3.4.45 TinyMCE A4 composer, rebuilt from pre-Layout-Lab v3.4.37.
+
+This version repairs advert artwork behaviour in the Article Library composer:
+- generated advert assets are recognised as adverts even when old markup lacks the inline-advert class;
+- generated/inserted adverts do not render captions;
+- user resizing of an advert in TinyMCE is preserved into A4 preview and Issue Builder via data-mag-advert-custom-size and inline figure width;
+- advert artwork remains no-border/no-surround;
+- normal article image captions/borders/floats are not intentionally changed.
+
+Future planning note remains: possible A3 printer/imposition export path while keeping A4 as the editing unit.

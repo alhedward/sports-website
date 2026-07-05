@@ -1,0 +1,22 @@
+LROC handover from v3.4.23
+==========================
+
+Current status
+--------------
+v3.4.23 is a narrow Article Library / Issue Builder state-sync patch. Tony discovered that after an article was placed into the Issue Builder, returning to the Article Library placement selector still labelled the same page as blank/available. The generated TinyMCE/source-composer slots were being deliberately ignored by the older occupancy check because that logic was originally written for composer reset/preserved-panel behaviour.
+
+The patch adds a separate page-occupancy view for Article Library placement labels. It treats generated TinyMCE article pages, source document pages, composer pages and content items whose assignedPageNumbers include the page as real occupants for the UI label. This fixes the left-hand/right-hand mismatch without changing the actual placement/reset behaviour.
+
+Preserved behaviour
+-------------------
+- v3.4.22 phantom-page trim remains in place.
+- v3.4.20 Insert Advert caption suppression remains in place.
+- v3.4.13 double-click image caption editing remains in place.
+- Deploy helper v1.13 quick deploy prompt remains in lroc/deployer/deploy_helper.py.
+
+Next likely work
+----------------
+- Verify Article Library page selector now reports pages containing placed articles as occupied/contains placed article.
+- Verify v3.4.22 phantom-page trim with the manually moved image.
+- Continue only after page count and selector state are stable.
+- Later, consider controlled image layout modes: full-column, float-left, float-right, reset.

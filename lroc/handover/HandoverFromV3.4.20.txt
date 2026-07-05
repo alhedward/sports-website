@@ -1,0 +1,21 @@
+LROC handover from v3.4.20 — Advert Caption Suppression
+
+Current focus:
+- Article Library A4 preview and Issue Builder renderer refinement.
+
+What changed in v3.4.20:
+- Insert Advert now creates an inline advert figure without a figcaption.
+- Article HTML normalisation removes figcaptions from inline advert figures.
+- Caption selected image refuses to caption inline adverts and cleans accidental advert figcaptions.
+- CSS hides advert figcaptions across editor preview, measurement, Issue Builder preview, and rendered article paths as a defensive fallback.
+
+Known context:
+- User confirmed image captions from v3.4.13 work well and render correctly in Issue Builder preview. Preserve normal image captions.
+- User can manually move the offending article image to get the desired layout. Preserve manual earlier/later image controls.
+- Insert Advert must remain visually advert-like but must not add a caption or filename under the advert image.
+- Avoid the old explicit-column packer from v3.4.7/v3.4.9 because it damaged bullets and spacing.
+
+Next checks:
+- Insert an advert through Article Library > Insert advert and confirm no caption/filename appears in the editor, A4 preview, or Issue Builder preview.
+- Confirm normal article images can still be captioned by double-click or Caption selected image.
+- Continue testing phantom continuation-page trimming from v3.4.19.

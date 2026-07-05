@@ -1,0 +1,27 @@
+LROC Handover — v3.5.3 True TinyMCE A4 Composer Geometry
+Date: 2026-06-19 17:24 AEST
+
+Baseline:
+- Built from v3.5.2.
+- Layout Lab/GrapesJS remains excluded/abandoned.
+- Article Library / TinyMCE is the active composer path.
+
+Key changes:
+- TinyMCE classic iframe now acts as an A4 composer surface.
+- The editor body uses the same core content width/height as the A4 article renderer: 700 px x 990 px.
+- Column picker still supports 1/2/3 columns and now applies inside the A4-sized editor body.
+- Page-height marker guidance is visible inside TinyMCE.
+- A4 preview remains as confirmation and still uses the production renderer path.
+
+Must not regress:
+- Caption optional placeholder removal from v3.5.1.
+- Blank line preservation from v3.5.2.
+- Region placement foundation from v3.5.0.
+- Normal image captions and borders.
+- Advert no-caption/no-border behaviour.
+- Clean v3.4.37-derived branch, no GrapesJS/Layout Lab.
+
+Future planning:
+- Move toward a true TinyMCE-based page/article composer that can build pages in A4 geometry.
+- Page/region model should remain content-region based, not old slot-type based.
+- Future final PDF may need A3 printer/imposition output while the editor remains A4 page based.

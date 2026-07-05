@@ -1,0 +1,54 @@
+LROC Magazine / Article Renderer Handover
+Generated: 2026-06-21 AEST
+For: Tony / next ChatGPT session
+
+CURRENT BASELINE
+================
+Latest package created in this chat:
+
+  v3.5.12 — Trips Map Geocoding Fallback and Config Repair
+
+Continue from v3.5.12 unless Tony says otherwise.
+
+SUMMARY OF THIS PASS
+====================
+Tony reported that in Trips & Events, clicking the map lookup action showed:
+
+  Could not find that location: Geoapify geocoding API key is not configured.
+
+Changes made:
+
+- The admin geocode route now returns a clean configured=false response when the Geoapify geocoding key is missing, instead of bubbling this up as a location lookup failure.
+
+- The Trips & Events admin UI now treats missing geocoding config as a configuration/availability issue, not as “could not find that location”.
+
+- The Open/Search in maps link in the admin event editor now works from meeting name/address even before lat/lng are known. Previously it only appeared once coordinates existed.
+
+- Terraform now falls back to using the Geoapify map tile key for geocoding if a separate geocoding key is not supplied. This matches Geoapify’s usual account API key model and avoids needing two separate variables for normal LROC deployments.
+
+- Added GEOAPIFY_GEOCODING_URL to the member-files Lambda environment so the existing Terraform variable is actually honoured.
+
+TEST PRIORITIES
+===============
+After deployment:
+
+1. Open Admin -> Trips & Events.
+2. Enter a meeting name/address.
+3. Confirm Search/Open in maps appears even before coordinates are set.
+4. Click Find on map.
+5. If a Geoapify key is configured, confirm search results appear and selecting one fills lat/lng.
+6. If no key is configured, confirm the message explains address search is not configured and suggests Search in maps/manual coordinates.
+7. Confirm saving an event with manually entered lat/lng still works.
+8. Confirm public Events page still opens Google Maps from coordinates or address.
+
+KNOWN DIRECTION
+===============
+The wider Issue Composer direction remains:
+
+- Generate known recurring club pages from site data.
+- Place/carry adverts deliberately.
+- Place edited articles into remaining suitable regions.
+- Fill remaining gaps with imported/filler material.
+- Run a final polish/refit pass after all content is settled.
+
+Avoid making the editor choose between overlapping slot/manual layout methods unless they are using Advanced Layout deliberately.
