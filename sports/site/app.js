@@ -20,6 +20,8 @@ const els = {
   detailPanel: document.querySelector('#detailPanel'),
   detailContent: document.querySelector('#detailContent'),
   closeDetail: document.querySelector('#closeDetail'),
+  installAppButton: document.querySelector('#installAppButton'),
+  offlineNotice: document.querySelector('#offlineNotice'),
 };
 
 function apiUrl(path) {
@@ -339,3 +341,54 @@ loadHome().catch(err => {
   console.error(err);
   els.organisations.innerHTML = `<article class="card error"><h3>Could not load API data</h3><p>${safe(err.message)}</p></article>`;
 });
+
+
+let deferredInstallPrompt = null;
+
+function updateOfflineNotice() {
+  if (!els.offlineNotice) return;
+  els.offlineNotice.hidden = navigator.onLine;
+}
+
+function setupPwaInstall() {
+  if (!els.installAppButton) return;
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    els.installAppButton.hidden = false;
+  });
+
+  els.installAppButton.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    els.installAppButton.disabled = true;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(() => null);
+    deferredInstallPrompt = null;
+    els.installAppButton.hidden = true;
+    els.installAppButton.disabled = false;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    els.installAppButton.hidden = true;
+  });
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isSecure) return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.warn('Service worker registration failed', err);
+    });
+  });
+}
+
+setupPwaInstall();
+updateOfflineNotice();
+window.addEventListener('online', updateOfflineNotice);
+window.addEventListener('offline', updateOfflineNotice);
+registerServiceWorker();

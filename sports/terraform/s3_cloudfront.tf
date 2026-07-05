@@ -144,12 +144,15 @@ resource "aws_s3_object" "frontend" {
     "application/octet-stream"
   )
 
+  cache_control = startswith(each.value, "icons/") ? "public, max-age=31536000, immutable" : "no-cache"
 }
 
+
 resource "aws_s3_object" "config" {
-  bucket       = aws_s3_bucket.site.id
-  key          = "config.js"
-  content_type = "application/javascript; charset=utf-8"
-  content      = "window.SPORTSPOT_CONFIG = { apiBaseUrl: \"${aws_apigatewayv2_api.http.api_endpoint}\" };\n"
-  etag         = md5("window.SPORTSPOT_CONFIG = { apiBaseUrl: \"${aws_apigatewayv2_api.http.api_endpoint}\" };\n")
+  bucket        = aws_s3_bucket.site.id
+  key           = "config.js"
+  content_type  = "application/javascript; charset=utf-8"
+  cache_control = "no-cache"
+  content       = "window.SPORTSPOT_CONFIG = { apiBaseUrl: \"${aws_apigatewayv2_api.http.api_endpoint}\" };\n"
+  etag          = md5("window.SPORTSPOT_CONFIG = { apiBaseUrl: \"${aws_apigatewayv2_api.http.api_endpoint}\" };\n")
 }

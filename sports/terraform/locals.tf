@@ -14,15 +14,16 @@ locals {
   public_site_url            = local.custom_domain_enabled ? "https://${var.custom_domain_name}" : "https://${aws_cloudfront_distribution.site.domain_name}"
 
   content_types = {
-    html = "text/html; charset=utf-8"
-    css  = "text/css; charset=utf-8"
-    js   = "application/javascript; charset=utf-8"
-    json = "application/json; charset=utf-8"
-    svg  = "image/svg+xml"
-    png  = "image/png"
-    jpg  = "image/jpeg"
-    jpeg = "image/jpeg"
-    ico  = "image/x-icon"
-    txt  = "text/plain; charset=utf-8"
+    html        = "text/html; charset=utf-8"
+    css         = "text/css; charset=utf-8"
+    js          = "application/javascript; charset=utf-8"
+    json        = "application/json; charset=utf-8"
+    webmanifest = "application/manifest+json; charset=utf-8"
+    svg         = "image/svg+xml"
+    png         = "image/png"
+    jpg         = "image/jpeg"
+    jpeg        = "image/jpeg"
+    ico         = "image/x-icon"
+    txt         = "text/plain; charset=utf-8"
   }
 }

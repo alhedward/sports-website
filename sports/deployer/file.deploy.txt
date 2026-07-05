@@ -40,6 +40,7 @@ python3 -m py_compile   "{{SITE_NAME}}/lambda/api/handler.py"   "{{SITE_NAME}}/l
 
 if command -v node >/dev/null 2>&1; then
   node --check "{{SITE_NAME}}/site/app.js"
+node --check "{{SITE_NAME}}/site/sw.js"
 else
   echo "node not found; skipping frontend syntax check."
 fi

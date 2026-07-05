@@ -63,6 +63,18 @@ terraform output -raw site_url
 
 This package expands the official body directory with Cricket Australia / Play Cricket, Motorsport Australia, FIA, Motorcycling Australia, Karting Australia, the Australian Power Boat Association, Australian Sailing / Discover Sailing, World Sailing, and accessible Sailability pathways. It also adds top-player spotlight cards for cricket, motorsport, sailing, football and basketball.
 
+## PWA support
+
+The public site is installable as a Progressive Web App. The package includes:
+
+- `site/manifest.webmanifest` for install metadata, app name, theme colour, shortcuts and icons.
+- `site/sw.js` for service-worker caching of the app shell and a network-first cached fallback for read-only API calls.
+- `site/offline.html` as the offline fallback page.
+- PNG icons under `site/icons/`, including a maskable 512px icon.
+- An install button that appears only when the browser exposes the PWA install prompt.
+
+The public PWA does not add login or admin capability; admin management should remain in a separate microsite.
+
 ## Commercial direction
 
 The POC includes sponsor slots but no live ad network code. That is deliberate. This keeps the first release clean and lets you define a sponsor policy before monetising.

@@ -1,0 +1,82 @@
+{
+  "name": "Sports.vk2ale \u2014 Sports for Everyone",
+  "short_name": "Sports.vk2ale",
+  "description": "Find official sporting bodies, inclusive pathways, major events, and top-player inspiration.",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#071316",
+  "theme_color": "#071316",
+  "categories": [
+    "sports",
+    "lifestyle",
+    "news"
+  ],
+  "lang": "en-AU",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Top players",
+      "short_name": "Players",
+      "description": "Open top-player spotlights",
+      "url": "/#top-players",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Official bodies",
+      "short_name": "Bodies",
+      "description": "Browse official sporting bodies",
+      "url": "/#directory",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Suggest a body",
+      "short_name": "Suggest",
+      "description": "Submit a sporting body suggestion",
+      "url": "/#suggest",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
