@@ -1,4 +1,4 @@
-const APP_VERSION = '0.4.3-pwa-public-site';
+const APP_VERSION = '0.4.4-pwa-section-drawer';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 

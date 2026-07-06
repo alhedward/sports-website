@@ -22,6 +22,13 @@ const els = {
   closeDetail: document.querySelector('#closeDetail'),
   installAppButton: document.querySelector('#installAppButton'),
   offlineNotice: document.querySelector('#offlineNotice'),
+  drawerToggle: document.querySelector('#drawerToggle'),
+  drawerClose: document.querySelector('#drawerClose'),
+  drawerOverlay: document.querySelector('#drawerOverlay'),
+  sectionDrawer: document.querySelector('#sectionDrawer'),
+  drawerBackToTop: document.querySelector('#drawerBackToTop'),
+  backToTopButton: document.querySelector('#backToTopButton'),
+  drawerLinks: document.querySelectorAll('[data-drawer-link]'),
 };
 
 function apiUrl(path) {
@@ -312,6 +319,81 @@ async function loadHome() {
 }
 
 
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+}
+
+function openDrawer() {
+  if (!els.sectionDrawer || !els.drawerOverlay || !els.drawerToggle) return;
+  els.sectionDrawer.classList.add('open');
+  els.sectionDrawer.setAttribute('aria-hidden', 'false');
+  els.drawerOverlay.hidden = false;
+  els.drawerToggle.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('drawer-open');
+  els.drawerClose?.focus();
+}
+
+function closeDrawer() {
+  if (!els.sectionDrawer || !els.drawerOverlay || !els.drawerToggle) return;
+  els.sectionDrawer.classList.remove('open');
+  els.sectionDrawer.setAttribute('aria-hidden', 'true');
+  els.drawerOverlay.hidden = true;
+  els.drawerToggle.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('drawer-open');
+}
+
+function updateBackToTopVisibility() {
+  const show = window.scrollY > 560;
+  if (els.backToTopButton) els.backToTopButton.hidden = !show;
+}
+
+function setupSectionNavigation() {
+  els.drawerToggle?.addEventListener('click', openDrawer);
+  els.drawerClose?.addEventListener('click', closeDrawer);
+  els.drawerOverlay?.addEventListener('click', closeDrawer);
+  els.drawerBackToTop?.addEventListener('click', () => {
+    closeDrawer();
+    scrollToTop();
+  });
+  els.backToTopButton?.addEventListener('click', scrollToTop);
+
+  els.drawerLinks?.forEach(link => {
+    link.addEventListener('click', event => {
+      const href = link.getAttribute('href') || '';
+      closeDrawer();
+      if (href === '#top') {
+        event.preventDefault();
+        scrollToTop();
+      }
+    });
+  });
+
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeDrawer();
+  });
+  window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+  updateBackToTopVisibility();
+
+  const sectionIds = Array.from(els.drawerLinks || [])
+    .map(link => (link.getAttribute('href') || '').replace('#', ''))
+    .filter(id => id && id !== 'top');
+  const sections = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+  if ('IntersectionObserver' in window && sections.length) {
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      els.drawerLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === `#${visible.target.id}`);
+      });
+    }, { rootMargin: '-30% 0px -55% 0px', threshold: [0.08, 0.22, 0.45] });
+    sections.forEach(section => observer.observe(section));
+  }
+}
+
 async function submitSuggestion(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -387,6 +469,7 @@ function registerServiceWorker() {
   });
 }
 
+setupSectionNavigation();
 setupPwaInstall();
 updateOfflineNotice();
 window.addEventListener('online', updateOfflineNotice);
