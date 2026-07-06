@@ -36,7 +36,7 @@ fi
 cd "{{DEST_PARENT_DIR}}"
 
 echo "== Validation =="
-python3 -m py_compile   "{{SITE_NAME}}/lambda/api/handler.py"   "{{SITE_NAME}}/lambda/ingest/handler.py"   "{{SITE_NAME}}/scripts/seed_data.py"
+python3 -m py_compile   "{{SITE_NAME}}/lambda/api/handler.py"   "{{SITE_NAME}}/lambda/ingest/handler.py"   "{{SITE_NAME}}/scripts/seed_data.py"   "{{SITE_NAME}}/admin_manager/sports_admin_manager.py"
 
 if command -v node >/dev/null 2>&1; then
   node --check "{{SITE_NAME}}/site/app.js"
@@ -55,7 +55,7 @@ fi
 
 echo "== Git =="
 git status
-git add   "{{SITE_NAME}}/VERSION"   "{{SITE_NAME}}/README.md"   "{{SITE_NAME}}/Makefile"   "{{SITE_NAME}}/lambda"   "{{SITE_NAME}}/site"   "{{SITE_NAME}}/terraform"   "{{SITE_NAME}}/data"   "{{SITE_NAME}}/docs"   "{{SITE_NAME}}/scripts"   "{{SITE_NAME}}/deployer"   "{{SITE_NAME}}/file.deploy.txt"
+git add   "{{SITE_NAME}}/VERSION"   "{{SITE_NAME}}/README.md"   "{{SITE_NAME}}/Makefile"   "{{SITE_NAME}}/lambda"   "{{SITE_NAME}}/site"   "{{SITE_NAME}}/terraform"   "{{SITE_NAME}}/data"   "{{SITE_NAME}}/docs"   "{{SITE_NAME}}/scripts"   "{{SITE_NAME}}/deployer"   "{{SITE_NAME}}/admin_manager"   "{{SITE_NAME}}/file.deploy.txt"
 
 if [ -d ".github/workflows" ]; then
   git add ".github/workflows"

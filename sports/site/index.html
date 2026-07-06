@@ -12,11 +12,9 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div id="top" class="page-top" aria-hidden="true"></div>
-  <div id="offlineNotice" class="offline-notice" hidden>You are offline. Cached content is available; live search and suggestions need a connection.</div>
   <button id="drawerToggle" class="drawer-toggle" type="button" aria-label="Open section navigation" aria-expanded="false" aria-controls="sectionDrawer">
-    <span aria-hidden="true">☰</span>
-    <span>Sections</span>
+    <span class="drawer-glyph" aria-hidden="true">☰</span>
+    <span class="drawer-label">Menu</span>
   </button>
   <div id="drawerOverlay" class="drawer-overlay" hidden></div>
   <aside id="sectionDrawer" class="section-drawer" aria-label="Section navigation" aria-hidden="true">
@@ -39,13 +37,19 @@
     <button id="drawerBackToTop" class="drawer-top-button" type="button">Back to top ↑</button>
   </aside>
   <button id="backToTopButton" class="back-to-top" type="button" hidden aria-label="Back to top">↑ Top</button>
-  <header class="hero">
-    <nav class="nav">
-      <div class="brand">Sports.vk2ale</div>
-      <a href="#suggest" class="nav-link">Suggest a sport body</a>
-      <a href="#partner" class="nav-link">Sponsor the mission</a>
-      <button id="installAppButton" class="nav-install" type="button" hidden>Install app</button>
-    </nav>
+
+  <div id="siteShell" class="site-shell">
+    <div id="top" class="page-top" aria-hidden="true"></div>
+    <div id="offlineNotice" class="offline-notice" hidden>You are offline. Cached content is available; live search and suggestions need a connection.</div>
+    <header class="hero">
+      <nav class="nav">
+        <div class="brand">Sports.vk2ale</div>
+        <div class="nav-actions" aria-label="Primary actions">
+          <a href="#suggest" class="nav-link">Suggest a sport body</a>
+          <a href="#partner" class="nav-link">Sponsor the mission</a>
+          <button id="installAppButton" class="nav-install" type="button" hidden>Install app</button>
+        </div>
+      </nav>
     <section class="hero-content">
       <p class="eyebrow">Sports for everyone</p>
       <h1>Find a sport, follow the big events, and connect with the official bodies that can get you involved.</h1>
@@ -158,9 +162,10 @@
     </section>
   </main>
 
-  <footer>
-    <p>Curated public-link demo. This site links to official sources; verify source terms before commercial data reuse. Sponsorship placements are placeholders until partners are approved.</p>
-  </footer>
+    <footer>
+      <p>Curated public-link demo. This site links to official sources; verify source terms before commercial data reuse. Sponsorship placements are placeholders until partners are approved.</p>
+    </footer>
+  </div>
 
   <script src="/config.js"></script>
   <script src="/app.js" type="module"></script>

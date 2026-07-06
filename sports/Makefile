@@ -2,7 +2,7 @@
 
 fmt:
 	terraform -chdir=terraform fmt -recursive
-	python3 -m py_compile lambda/api/handler.py lambda/ingest/handler.py scripts/seed_data.py
+	python3 -m py_compile lambda/api/handler.py lambda/ingest/handler.py scripts/seed_data.py admin_manager/sports_admin_manager.py
 
 deploy:
 	terraform -chdir=terraform init

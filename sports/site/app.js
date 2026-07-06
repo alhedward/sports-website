@@ -320,6 +320,13 @@ async function loadHome() {
 
 
 
+
+function syncStandaloneModeClass() {
+  const query = window.matchMedia ? window.matchMedia('(display-mode: standalone)') : null;
+  const standalone = Boolean(query?.matches || window.navigator.standalone === true);
+  document.body.classList.toggle('standalone-mode', standalone);
+}
+
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
@@ -362,10 +369,17 @@ function setupSectionNavigation() {
   els.drawerLinks?.forEach(link => {
     link.addEventListener('click', event => {
       const href = link.getAttribute('href') || '';
+      if (!href.startsWith('#')) return;
+      event.preventDefault();
       closeDrawer();
       if (href === '#top') {
-        event.preventDefault();
         scrollToTop();
+        return;
+      }
+      const target = document.querySelector(href);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', `${window.location.pathname}${window.location.search}${href}`);
       }
     });
   });
@@ -469,6 +483,9 @@ function registerServiceWorker() {
   });
 }
 
+syncStandaloneModeClass();
+const standaloneModeQuery = window.matchMedia ? window.matchMedia('(display-mode: standalone)') : null;
+standaloneModeQuery?.addEventListener?.('change', syncStandaloneModeClass);
 setupSectionNavigation();
 setupPwaInstall();
 updateOfflineNotice();

@@ -9,13 +9,19 @@
   --accent-2: #79c7ff;
   --line: rgba(255,255,255,0.16);
   --shadow: 0 22px 80px rgba(0,0,0,0.36);
+  --drawer-width: clamp(290px, 28vw, 380px);
 }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top left, #174f56 0, #071116 36rem), var(--bg); color: var(--text); }
+body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top left, #174f56 0, #071116 36rem), var(--bg); color: var(--text); overflow-x: hidden; }
+.site-shell { min-height: 100vh; width: 100%; transition: margin-left 220ms ease, width 220ms ease; will-change: margin-left, width; }
+body.drawer-open .site-shell { margin-left: var(--drawer-width); width: calc(100% - var(--drawer-width)); }
+body.standalone-mode .site-shell { transition: none; }
 a { color: inherit; }
 .hero { padding: 24px clamp(18px, 4vw, 64px) 72px; min-height: 590px; background: linear-gradient(130deg, rgba(128,243,179,0.18), transparent 35%), linear-gradient(45deg, rgba(121,199,255,0.16), transparent 48%); }
 .nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 90px; }
+.nav-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
 .brand { font-weight: 900; letter-spacing: -0.04em; font-size: clamp(1.35rem, 3vw, 2rem); }
 .nav-link, .button-link, button { border: 1px solid var(--line); background: rgba(255,255,255,0.08); color: var(--text); padding: 12px 16px; border-radius: 999px; text-decoration: none; font-weight: 750; cursor: pointer; }
 .button-link { display: inline-flex; background: var(--accent); color: #082018; border: 0; box-shadow: var(--shadow); }
@@ -46,14 +52,37 @@ main { padding: 0 clamp(18px, 4vw, 64px) 64px; }
   align-items: center;
   gap: 8px;
   border-color: rgba(128,243,179,0.34);
-  background: rgba(7,17,22,0.84);
+  background: rgba(7,17,22,0.86);
   color: var(--text);
   backdrop-filter: blur(16px);
   box-shadow: 0 18px 48px rgba(0,0,0,0.32);
 }
 .drawer-toggle {
-  left: clamp(14px, 3vw, 28px);
-  bottom: clamp(14px, 3vw, 28px);
+  left: 0;
+  top: calc(env(safe-area-inset-top, 0px) + 92px);
+  bottom: auto;
+  min-height: 46px;
+  min-width: 48px;
+  border-left: 0;
+  border-radius: 0 18px 18px 0;
+  padding: 11px 13px 11px 11px;
+  letter-spacing: 0.01em;
+  transition: left 220ms ease, transform 150ms ease, background 150ms ease, opacity 150ms ease;
+}
+.drawer-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 1.12rem;
+  line-height: 1;
+}
+.drawer-label {
+  font-size: 0.9rem;
+}
+body.drawer-open .drawer-toggle {
+  left: var(--drawer-width);
+  transform: none;
 }
 .back-to-top {
   right: clamp(14px, 3vw, 28px);
@@ -70,17 +99,21 @@ main { padding: 0 clamp(18px, 4vw, 64px) 64px; }
   outline: none;
 }
 .drawer-overlay {
+  display: none;
   position: fixed;
   inset: 0;
   z-index: 70;
-  background: rgba(0,0,0,0.52);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.42);
+  backdrop-filter: blur(2px);
+}
+.drawer-overlay[hidden] {
+  display: none;
 }
 .section-drawer {
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 80;
-  width: min(390px, calc(100vw - 34px));
+  width: var(--drawer-width);
   transform: translateX(-105%);
   transition: transform 180ms ease;
   background: linear-gradient(180deg, rgba(13,38,43,0.98), rgba(7,17,22,0.98));
@@ -146,7 +179,15 @@ main { padding: 0 clamp(18px, 4vw, 64px) 64px; }
   border-color: transparent;
 }
 body.drawer-open {
-  overflow: hidden;
+  overflow-x: hidden;
+}
+body.drawer-open .hero,
+body.drawer-open main,
+body.drawer-open footer {
+  border-left: 1px solid rgba(255,255,255,0.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-shell, .section-drawer, .drawer-toggle, .back-to-top, .summary-card, .card, .player.spotlight { transition: none; }
 }
 
 
@@ -323,9 +364,75 @@ footer { padding: 32px clamp(18px, 4vw, 64px); color: var(--muted); border-top: 
 }
 
 
-@media (max-width: 560px) {
-  .drawer-toggle span:last-child { display: none; }
-  .drawer-toggle, .back-to-top { padding: 12px 14px; }
-  .back-to-top { right: 12px; }
-  .drawer-toggle { left: 12px; }
+@media (max-width: 760px), (display-mode: standalone) {
+  .nav { margin-bottom: 58px; }
+  .nav-link { display: none; }
+  .nav-actions { gap: 8px; }
+}
+
+body.standalone-mode .nav-actions {
+  display: none;
+}
+
+@media (max-width: 700px), (display-mode: standalone) {
+  :root { --drawer-width: min(84vw, 330px); }
+  body.drawer-open .site-shell,
+  body.standalone-mode.drawer-open .site-shell {
+    margin-left: 0;
+    width: 100%;
+  }
+  body.drawer-open .hero,
+  body.drawer-open main,
+  body.drawer-open footer {
+    border-left: 0;
+  }
+  .drawer-overlay:not([hidden]) {
+    display: block;
+  }
+  .section-drawer {
+    z-index: 80;
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  }
+  .drawer-toggle {
+    top: calc(env(safe-area-inset-top, 0px) + 82px);
+    padding: 11px;
+  }
+  .drawer-label {
+    display: none;
+  }
+  body.drawer-open .drawer-toggle {
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-102%);
+  }
+  .back-to-top { right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); padding: 12px 14px; }
+}
+
+@media (max-width: 430px) {
+  :root { --drawer-width: min(88vw, 310px); }
+}
+
+/* Native-app style drawer behaviour for installed PWA contexts detected by JavaScript. */
+body.standalone-mode.drawer-open .site-shell {
+  margin-left: 0;
+  width: 100%;
+}
+body.standalone-mode.drawer-open .hero,
+body.standalone-mode.drawer-open main,
+body.standalone-mode.drawer-open footer {
+  border-left: 0;
+}
+body.standalone-mode .drawer-label {
+  display: none;
+}
+body.standalone-mode.drawer-open .drawer-toggle {
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-102%);
+}
+
+body.standalone-mode .drawer-overlay:not([hidden]) {
+  display: block;
 }

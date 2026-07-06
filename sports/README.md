@@ -116,3 +116,22 @@ Current version: 0.4.4-pwa-section-drawer
 ## UX polish
 
 The public PWA includes a section drawer and floating back-to-top control for quicker navigation on long mobile pages.
+## Local admin manager
+
+This package includes a local-only Tkinter admin manager at:
+
+```bash
+python3 sports/admin_manager/sports_admin_manager.py
+```
+
+It uses your local AWS credentials through `boto3` and manages the DynamoDB catalogue directly. It can review public suggestions, approve suggestions into curated sporting-body or pathway records, edit top-player spotlight cards, and export/import catalogue JSON backups.
+
+Install local requirements when needed:
+
+```bash
+python3 -m pip install boto3
+sudo apt install python3-tk
+```
+
+The tool deliberately keeps admin management off the public website for the POC.
+
