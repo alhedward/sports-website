@@ -332,13 +332,21 @@ function scrollToTop() {
   history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 }
 
+function syncDrawerToggleState(isOpen) {
+  if (!els.drawerToggle) return;
+  els.drawerToggle.setAttribute('aria-expanded', String(isOpen));
+  els.drawerToggle.setAttribute('aria-label', isOpen ? 'Close section navigation' : 'Open section navigation');
+  const glyph = els.drawerToggle.querySelector('.drawer-glyph');
+  if (glyph) glyph.textContent = isOpen ? '×' : '☰';
+}
+
 function openDrawer() {
   if (!els.sectionDrawer || !els.drawerOverlay || !els.drawerToggle) return;
   els.sectionDrawer.classList.add('open');
   els.sectionDrawer.setAttribute('aria-hidden', 'false');
   els.drawerOverlay.hidden = false;
-  els.drawerToggle.setAttribute('aria-expanded', 'true');
   document.body.classList.add('drawer-open');
+  syncDrawerToggleState(true);
   els.drawerClose?.focus();
 }
 
@@ -347,8 +355,16 @@ function closeDrawer() {
   els.sectionDrawer.classList.remove('open');
   els.sectionDrawer.setAttribute('aria-hidden', 'true');
   els.drawerOverlay.hidden = true;
-  els.drawerToggle.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('drawer-open');
+  syncDrawerToggleState(false);
+}
+
+function toggleDrawer() {
+  if (document.body.classList.contains('drawer-open')) {
+    closeDrawer();
+  } else {
+    openDrawer();
+  }
 }
 
 function updateBackToTopVisibility() {
@@ -357,7 +373,7 @@ function updateBackToTopVisibility() {
 }
 
 function setupSectionNavigation() {
-  els.drawerToggle?.addEventListener('click', openDrawer);
+  els.drawerToggle?.addEventListener('click', toggleDrawer);
   els.drawerClose?.addEventListener('click', closeDrawer);
   els.drawerOverlay?.addEventListener('click', closeDrawer);
   els.drawerBackToTop?.addEventListener('click', () => {
@@ -383,6 +399,8 @@ function setupSectionNavigation() {
       }
     });
   });
+
+  syncDrawerToggleState(document.body.classList.contains('drawer-open'));
 
   window.addEventListener('keydown', event => {
     if (event.key === 'Escape') closeDrawer();

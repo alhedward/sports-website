@@ -1,4 +1,4 @@
-const APP_VERSION = '0.5.2-pwa-edge-drawer-navigation';
+const APP_VERSION = '0.5.3-mobile-pwa-persistent-drawer-pull';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 
