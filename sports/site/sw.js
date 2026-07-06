@@ -1,4 +1,4 @@
-const APP_VERSION = '0.5.3-mobile-pwa-persistent-drawer-pull';
+const APP_VERSION = '0.5.5-hamburger-only-drawer';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 

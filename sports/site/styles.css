@@ -50,7 +50,7 @@ main { padding: 0 clamp(18px, 4vw, 64px) 64px; }
   z-index: 60;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   border-color: rgba(128,243,179,0.34);
   background: rgba(7,17,22,0.86);
   color: var(--text);
@@ -62,10 +62,10 @@ main { padding: 0 clamp(18px, 4vw, 64px) 64px; }
   top: calc(env(safe-area-inset-top, 0px) + 92px);
   bottom: auto;
   min-height: 46px;
-  min-width: 48px;
+  min-width: 46px;
   border-left: 0;
   border-radius: 0 18px 18px 0;
-  padding: 11px 13px 11px 11px;
+  padding: 11px;
   letter-spacing: 0.01em;
   transition: left 220ms ease, transform 150ms ease, background 150ms ease, opacity 150ms ease;
 }
@@ -76,9 +76,6 @@ main { padding: 0 clamp(18px, 4vw, 64px) 64px; }
   height: 22px;
   font-size: 1.12rem;
   line-height: 1;
-}
-.drawer-label {
-  font-size: 0.9rem;
 }
 body.drawer-open .drawer-toggle {
   left: var(--drawer-width);
@@ -398,13 +395,20 @@ body.standalone-mode .nav-actions {
     right: 0;
     top: calc(env(safe-area-inset-top, 0px) + 18px);
     z-index: 95;
-    padding: 11px;
+    min-width: 30px;
+    width: 30px;
+    min-height: 46px;
+    padding: 10px 5px;
+    justify-content: center;
+    gap: 0;
     border-left: 1px solid rgba(128,243,179,0.34);
     border-right: 0;
-    border-radius: 18px 0 0 18px;
+    border-radius: 14px 0 0 14px;
   }
-  .drawer-label {
-    display: none;
+  .drawer-glyph {
+    width: 18px;
+    height: 18px;
+    font-size: 0.98rem;
   }
   body.drawer-open .drawer-toggle {
     left: auto;
@@ -434,17 +438,25 @@ body.standalone-mode.drawer-open main,
 body.standalone-mode.drawer-open footer {
   border-left: 0;
 }
-body.standalone-mode .drawer-label {
-  display: none;
-}
 body.standalone-mode .drawer-toggle {
   left: auto;
   right: 0;
   top: calc(env(safe-area-inset-top, 0px) + 18px);
   z-index: 95;
+  min-width: 30px;
+  width: 30px;
+  min-height: 46px;
+  padding: 10px 5px;
+  justify-content: center;
+  gap: 0;
   border-left: 1px solid rgba(128,243,179,0.34);
   border-right: 0;
-  border-radius: 18px 0 0 18px;
+  border-radius: 14px 0 0 14px;
+}
+body.standalone-mode .drawer-glyph {
+  width: 18px;
+  height: 18px;
+  font-size: 0.98rem;
 }
 body.standalone-mode.drawer-open .drawer-toggle {
   left: auto;

@@ -111,7 +111,7 @@ The deploy job validates, applies Terraform, seeds DynamoDB through the ingest L
 
 The frontend includes a `Suggest an official sporting body or pathway` form. Submissions go to the `suggestions` table as `pending_review`; they are not added to the public directory until reviewed. The recommended OpenAI-assisted research workflow is documented in `docs/COMMUNITY_DISCOVERY_PIPELINE.md`.
 
-Current version: 0.4.4-pwa-section-drawer
+Current version: 0.5.5-hamburger-only-drawer
 
 ## UX polish
 
