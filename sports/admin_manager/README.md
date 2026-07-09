@@ -128,3 +128,9 @@ sports-aggregator-dev-activity-log
 Public users can submit suggestions, but suggestions remain `pending_review` until an authenticated admin approves them. Activity-log records now capture the Cognito actor details when using Cognito API mode.
 
 MFA is intentionally off for this development build. The Cognito pool and local app flow are ready for adding TOTP/WebAuthn later.
+
+## 0.7.7 admin UI notes
+
+The admin manager now has a menu bar. API/Cognito settings live under `Admin -> API / Cognito settings...` and are saved automatically in `~/.sports-vk2ale-admin-manager.json`.
+
+`Admin -> Add Cognito user...` is an owner/bootstrap control and is only enabled in `boto3_direct` mode. It uses local AWS credentials to create a Cognito user and place them in `PrimaryAdmins`, `Admins`, or `Editors`.

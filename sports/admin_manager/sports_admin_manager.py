@@ -40,7 +40,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
-from tkinter import BOTH, END, LEFT, RIGHT, TOP, BOTTOM, X, Y, BooleanVar, StringVar, Text, Tk, Toplevel, filedialog, messagebox
+from tkinter import BOTH, END, LEFT, RIGHT, TOP, BOTTOM, X, Y, BooleanVar, StringVar, Text, Tk, Toplevel, Menu, filedialog, messagebox
 from tkinter import ttk
 
 try:
@@ -86,6 +86,56 @@ APP_VERSION_FILE = Path(__file__).resolve().parents[1] / "VERSION"
 ACTIVITY_LOG_COLLECTION = "activity_log"
 ACTIVITY_LOG_SUFFIX = "activity-log"
 ACTIVITY_LOG_DISPLAY_LIMIT = 500
+
+
+APP_AUTHOR = "Tony Edward / VK2ALE"
+APP_SUPPORT = "OpenAI ChatGPT coding support"
+APP_VERSION_FALLBACK = "0.7.7-admin-menu-cognito-users"
+
+
+def read_app_version() -> str:
+    """Read the package version, with a standalone-admin-app fallback."""
+    candidates = [
+        APP_VERSION_FILE,
+        Path(__file__).resolve().parent / "VERSION",
+        Path(__file__).resolve().parent.parent / "VERSION",
+    ]
+    for candidate in candidates:
+        try:
+            if candidate.exists():
+                value = candidate.read_text(encoding="utf-8").strip()
+                if value:
+                    return value
+        except Exception:
+            pass
+    return APP_VERSION_FALLBACK
+
+
+def center_window(window, width: int | None = None, height: int | None = None, parent=None) -> None:
+    """Centre a Tk/Toplevel window on the screen or over its parent."""
+    try:
+        window.update_idletasks()
+        if width is None:
+            width = max(window.winfo_reqwidth(), window.winfo_width())
+        if height is None:
+            height = max(window.winfo_reqheight(), window.winfo_height())
+        if parent is not None:
+            parent.update_idletasks()
+            parent_x = parent.winfo_rootx()
+            parent_y = parent.winfo_rooty()
+            parent_w = parent.winfo_width()
+            parent_h = parent.winfo_height()
+            x = parent_x + max((parent_w - width) // 2, 0)
+            y = parent_y + max((parent_h - height) // 2, 0)
+        else:
+            screen_w = window.winfo_screenwidth()
+            screen_h = window.winfo_screenheight()
+            x = max((screen_w - width) // 2, 0)
+            y = max((screen_h - height) // 2, 0)
+        window.geometry(f"{width}x{height}+{x}+{y}")
+    except Exception:
+        if width and height:
+            window.geometry(f"{width}x{height}")
 
 COLLECTIONS = {
     "suggestions": {
@@ -271,11 +321,7 @@ class DynamoAdminClient:
                 actor = self.caller_identity().get("Arn", "")
         except Exception:
             actor = ""
-        version = "unknown"
-        try:
-            version = APP_VERSION_FILE.read_text(encoding="utf-8").strip() or "unknown"
-        except Exception:
-            pass
+        version = read_app_version()
         item = {
             "id": f"log-{created_at.replace(':', '').replace('.', '-')}-{uuid.uuid4().hex[:10]}",
             "created_at": created_at,
@@ -392,6 +438,11 @@ class CognitoPkceAuth:
         self.config = config
         self.tokens: dict = {}
         self.claims: dict = {}
+        # API Gateway HTTP API JWT authorizers normally accept Cognito access tokens
+        # because their audience validation checks the access token client_id claim.
+        # Keep this mutable so we can fall back to the ID token and show diagnostics
+        # when a deployment is configured differently.
+        self.preferred_token_name = "access_token"
 
     @property
     def domain(self) -> str:
@@ -571,7 +622,7 @@ class JsonEditor(Toplevel):
     def __init__(self, parent: Tk, title: str, initial: dict, on_save) -> None:
         super().__init__(parent)
         self.title(title)
-        self.geometry("920x720")
+        center_window(self, 920, 720, parent)
         self.transient(parent)
         self.on_save = on_save
 
@@ -608,7 +659,7 @@ class SportsAdminApp:
     def __init__(self, root: Tk) -> None:
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("1260x820")
+        center_window(self.root, 1260, 820)
         self.client: DynamoAdminClient | None = None
         self.items: dict[str, list[dict]] = {key: [] for key in COLLECTIONS}
         self.selected_suggestion: dict | None = None
@@ -625,7 +676,9 @@ class SportsAdminApp:
         self.api_url_var = StringVar(value=DEFAULT_ADMIN_API_URL)
         self.cognito_domain_var = StringVar(value=DEFAULT_COGNITO_DOMAIN)
         self.cognito_client_id_var = StringVar(value=DEFAULT_COGNITO_CLIENT_ID)
-        self.callback_port_var = StringVar(value=DEFAULT_CALLBACK_PORT)
+        self.cognito_user_pool_id_var = StringVar(value=LOCAL_CONFIG.get("cognito_user_pool_id", ""))
+        self.callback_port_var = StringVar(value=LOCAL_CONFIG.get("callback_port", DEFAULT_CALLBACK_PORT))
+        self.connection_summary_var = StringVar(value=self.connection_summary_text())
         self.status_filter_var = StringVar(value="pending_review")
         self.record_collection_var = StringVar(value="sport_bodies")
         self.record_search_var = StringVar(value="")
@@ -633,9 +686,241 @@ class SportsAdminApp:
         self.status_var = StringVar(value="Not connected.")
         self._local_config_save_job = None
 
+        self.build_menu()
         self.build_ui()
         self.install_local_config_autosave()
+        self.auth_mode_var.trace_add("write", lambda *_args: self.update_menu_state())
+        self.update_menu_state()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def build_menu(self) -> None:
+        menu_bar = Menu(self.root)
+
+        file_menu = Menu(menu_bar, tearoff=0)
+        file_menu.add_command(label="Login / connect", command=self.connect_and_refresh)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.on_close)
+        menu_bar.add_cascade(label="File", menu=file_menu)
+
+        admin_menu = Menu(menu_bar, tearoff=0)
+        admin_menu.add_command(label="API / Cognito settings...", command=self.open_connection_settings_modal)
+        admin_menu.add_command(label="Add Cognito user...", command=self.open_add_cognito_user_modal)
+        menu_bar.add_cascade(label="Admin", menu=admin_menu)
+        self.admin_menu = admin_menu
+        self.add_user_menu_index = 1
+
+        help_menu = Menu(menu_bar, tearoff=0)
+        help_menu.add_command(label="About", command=self.open_about_modal)
+        menu_bar.add_cascade(label="Help", menu=help_menu)
+
+        self.root.config(menu=menu_bar)
+
+    def connection_summary_text(self) -> str:
+        api_state = "set" if self.api_url_var.get().strip() else "missing"
+        domain_state = "set" if self.cognito_domain_var.get().strip() else "missing"
+        client_state = "set" if self.cognito_client_id_var.get().strip() else "missing"
+        return f"API/Cognito settings: Admin API {api_state}, Cognito domain {domain_state}, Client ID {client_state}. Edit from Admin → API / Cognito settings."
+
+    def refresh_connection_summary(self) -> None:
+        if hasattr(self, "connection_summary_var"):
+            self.connection_summary_var.set(self.connection_summary_text())
+
+    def update_menu_state(self) -> None:
+        mode = self.auth_mode_var.get().strip() or "cognito_api"
+        try:
+            state = "normal" if mode == "boto3_direct" else "disabled"
+            self.admin_menu.entryconfig(self.add_user_menu_index, state=state)
+        except Exception:
+            pass
+        self.refresh_connection_summary()
+
+    def open_about_modal(self) -> None:
+        version = read_app_version()
+        message = (
+            f"{APP_TITLE}\n\n"
+            f"Version: {version}\n"
+            f"Project owner / author: {APP_AUTHOR}\n"
+            f"Development support: {APP_SUPPORT}\n\n"
+            "Sports.vk2ale community sports catalogue administration tool."
+        )
+        messagebox.showinfo("About", message, parent=self.root)
+
+    def open_connection_settings_modal(self) -> None:
+        win = Toplevel(self.root)
+        win.title("API / Cognito settings")
+        win.transient(self.root)
+        win.grab_set()
+        frame = ttk.Frame(win, padding=16)
+        frame.pack(fill=BOTH, expand=True)
+
+        ttk.Label(frame, text="Admin API").grid(row=0, column=0, sticky="w", pady=(0, 8))
+        ttk.Entry(frame, textvariable=self.api_url_var, width=72).grid(row=0, column=1, sticky="ew", pady=(0, 8))
+        ttk.Label(frame, text="Cognito domain").grid(row=1, column=0, sticky="w", pady=(0, 8))
+        ttk.Entry(frame, textvariable=self.cognito_domain_var, width=72).grid(row=1, column=1, sticky="ew", pady=(0, 8))
+        ttk.Label(frame, text="Client ID").grid(row=2, column=0, sticky="w", pady=(0, 8))
+        ttk.Entry(frame, textvariable=self.cognito_client_id_var, width=72).grid(row=2, column=1, sticky="ew", pady=(0, 8))
+        ttk.Label(frame, text="Callback port").grid(row=3, column=0, sticky="w", pady=(0, 8))
+        ttk.Entry(frame, textvariable=self.callback_port_var, width=12).grid(row=3, column=1, sticky="w", pady=(0, 8))
+        ttk.Label(frame, text="Cognito user pool ID").grid(row=4, column=0, sticky="w", pady=(0, 8))
+        ttk.Entry(frame, textvariable=self.cognito_user_pool_id_var, width=34).grid(row=4, column=1, sticky="w", pady=(0, 8))
+
+        note = (
+            "These settings are saved automatically to "
+            f"{LOCAL_CONFIG_PATH}.\n"
+            "Use Discover while in boto3_direct/owner mode to populate them from AWS."
+        )
+        ttk.Label(frame, text=note, wraplength=640).grid(row=5, column=0, columnspan=2, sticky="w", pady=(6, 12))
+
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=6, column=0, columnspan=2, sticky="ew")
+        ttk.Button(buttons, text="Discover via boto3", command=self.discover_settings_from_modal).pack(side=LEFT)
+        ttk.Button(buttons, text="Close", command=lambda: (self.save_local_config(), win.destroy())).pack(side=RIGHT)
+
+        frame.columnconfigure(1, weight=1)
+        center_window(win, 760, 300, self.root)
+        win.protocol("WM_DELETE_WINDOW", lambda: (self.save_local_config(), win.destroy()))
+
+    def discover_settings_from_modal(self) -> None:
+        def task():
+            return self.discover_connection_fields_via_boto3(self.get_config())
+
+        def done(discovered: dict):
+            self.apply_discovered_connection_fields(discovered)
+            for message in discovered.get("messages", []):
+                self.log(message)
+            self.log("Discovery complete.")
+
+        self.run_background("Discover API/Cognito settings", task, done)
+
+    def open_add_cognito_user_modal(self) -> None:
+        if (self.auth_mode_var.get().strip() or "cognito_api") != "boto3_direct":
+            messagebox.showinfo(
+                APP_TITLE,
+                "Add Cognito user is owner/bootstrap only and is available in boto3_direct mode, not cognito_api mode.",
+                parent=self.root,
+            )
+            return
+
+        win = Toplevel(self.root)
+        win.title("Add Cognito user")
+        win.transient(self.root)
+        win.grab_set()
+        frame = ttk.Frame(win, padding=16)
+        frame.pack(fill=BOTH, expand=True)
+
+        email_var = StringVar(value="")
+        role_var = StringVar(value="Admins")
+        send_email_var = BooleanVar(value=True)
+
+        ttk.Label(frame, text="Email / username").grid(row=0, column=0, sticky="w", pady=(0, 8))
+        email_entry = ttk.Entry(frame, textvariable=email_var, width=46)
+        email_entry.grid(row=0, column=1, sticky="ew", pady=(0, 8))
+        ttk.Label(frame, text="Role").grid(row=1, column=0, sticky="w", pady=(0, 8))
+        ttk.Combobox(
+            frame,
+            textvariable=role_var,
+            values=["PrimaryAdmins", "Admins", "Editors"],
+            state="readonly",
+            width=24,
+        ).grid(row=1, column=1, sticky="w", pady=(0, 8))
+        ttk.Label(frame, text="User pool ID").grid(row=2, column=0, sticky="w", pady=(0, 8))
+        ttk.Entry(frame, textvariable=self.cognito_user_pool_id_var, width=34).grid(row=2, column=1, sticky="w", pady=(0, 8))
+        ttk.Checkbutton(frame, text="Send Cognito welcome email", variable=send_email_var).grid(row=3, column=1, sticky="w", pady=(0, 8))
+        ttk.Label(
+            frame,
+            text="This uses your local AWS/boto3 credentials. Keep it as an owner/bootstrap control only.",
+            wraplength=520,
+        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(4, 12))
+
+        def create_clicked():
+            email = email_var.get().strip()
+            group = role_var.get().strip()
+            send_email = bool(send_email_var.get())
+            if not email or "@" not in email:
+                messagebox.showerror(APP_TITLE, "Enter a valid email address.", parent=win)
+                return
+            if group not in {"PrimaryAdmins", "Admins", "Editors"}:
+                messagebox.showerror(APP_TITLE, "Choose a valid role.", parent=win)
+                return
+
+            def task():
+                return self.create_cognito_user_via_boto3(email, group, send_email)
+
+            def done(result: dict):
+                self.log(result.get("message", "Cognito user created."))
+                messagebox.showinfo(APP_TITLE, result.get("message", "Cognito user created."), parent=win)
+                win.destroy()
+
+            self.run_background("Create Cognito user", task, done)
+
+        buttons = ttk.Frame(frame)
+        buttons.grid(row=5, column=0, columnspan=2, sticky="ew")
+        ttk.Button(buttons, text="Discover user pool", command=self.discover_settings_from_modal).pack(side=LEFT)
+        ttk.Button(buttons, text="Cancel", command=win.destroy).pack(side=RIGHT)
+        ttk.Button(buttons, text="Create user", command=create_clicked).pack(side=RIGHT, padx=(0, 10))
+
+        frame.columnconfigure(1, weight=1)
+        center_window(win, 620, 300, self.root)
+        email_entry.focus_set()
+
+    def create_cognito_user_via_boto3(self, email: str, group: str, send_welcome_email: bool) -> dict:
+        if boto3 is None:
+            raise RuntimeError("boto3 is not installed. Run: python3 -m pip install boto3")
+        config = self.get_config()
+        user_pool_id = self.cognito_user_pool_id_var.get().strip()
+        if not user_pool_id:
+            discovered = self.discover_connection_fields_via_boto3(config)
+            self.root.after(0, lambda cfg=deepcopy(discovered): self.apply_discovered_connection_fields(cfg))
+            user_pool_id = str(discovered.get("cognito_user_pool_id") or "").strip()
+        if not user_pool_id:
+            raise RuntimeError("Could not determine Cognito user pool ID. Use Admin → API / Cognito settings → Discover via boto3 first.")
+
+        if config.profile:
+            session = boto3.Session(profile_name=config.profile, region_name=config.region)
+        else:
+            session = boto3.Session(region_name=config.region)
+        cognito = session.client("cognito-idp")
+
+        kwargs = {
+            "UserPoolId": user_pool_id,
+            "Username": email,
+            "UserAttributes": [
+                {"Name": "email", "Value": email},
+                {"Name": "email_verified", "Value": "true"},
+            ],
+            "DesiredDeliveryMediums": ["EMAIL"],
+        }
+        if not send_welcome_email:
+            kwargs["MessageAction"] = "SUPPRESS"
+
+        created = False
+        try:
+            cognito.admin_create_user(**kwargs)
+            created = True
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code", "")
+            if code != "UsernameExistsException":
+                raise
+        cognito.admin_add_user_to_group(UserPoolId=user_pool_id, Username=email, GroupName=group)
+
+        summary = f"Cognito user {'created and ' if created else ''}added to {group}: {email}"
+        try:
+            if self.client:
+                self.client.write_activity(
+                    "cognito_user_created" if created else "cognito_user_group_added",
+                    summary,
+                    actor_arn=self.actor_arn,
+                    details={
+                        "email": email,
+                        "group": group,
+                        "user_pool_id": user_pool_id,
+                        "sent_welcome_email": send_welcome_email,
+                        "created": created,
+                    },
+                )
+        except Exception as exc:
+            summary += f". Activity log write failed: {exc}"
+        return {"message": summary, "created": created, "user_pool_id": user_pool_id, "group": group, "email": email}
 
     def build_ui(self) -> None:
         top = ttk.Frame(self.root, padding=10)
@@ -657,16 +942,7 @@ class SportsAdminApp:
         ttk.Label(top, text="Env").grid(row=0, column=8, sticky="w")
         ttk.Entry(top, textvariable=self.env_var, width=8).grid(row=0, column=9, padx=(4, 12), sticky="w")
         ttk.Button(top, text="Login / connect", command=self.connect_and_refresh).grid(row=0, column=10, sticky="e")
-
-        ttk.Label(top, text="Admin API").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(top, textvariable=self.api_url_var, width=42).grid(row=1, column=1, columnspan=3, padx=(4, 12), sticky="ew", pady=(8, 0))
-        ttk.Label(top, text="Cognito domain").grid(row=1, column=4, sticky="w", pady=(8, 0))
-        ttk.Entry(top, textvariable=self.cognito_domain_var, width=42).grid(row=1, column=5, columnspan=3, padx=(4, 12), sticky="ew", pady=(8, 0))
-        ttk.Label(top, text="Client ID").grid(row=2, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(top, textvariable=self.cognito_client_id_var, width=42).grid(row=2, column=1, columnspan=3, padx=(4, 12), sticky="ew", pady=(8, 0))
-        ttk.Label(top, text="Callback port").grid(row=2, column=4, sticky="w", pady=(8, 0))
-        ttk.Entry(top, textvariable=self.callback_port_var, width=8).grid(row=2, column=5, padx=(4, 12), sticky="w", pady=(8, 0))
-        top.columnconfigure(3, weight=1)
+        ttk.Label(top, textvariable=self.connection_summary_var).grid(row=1, column=0, columnspan=11, sticky="w", pady=(8, 0))
         top.columnconfigure(7, weight=1)
 
         self.notebook = ttk.Notebook(self.root)
@@ -850,8 +1126,8 @@ class SportsAdminApp:
 
     def install_local_config_autosave(self) -> None:
         """Automatically persist Cognito/API connection fields as the user edits them."""
-        for var in (self.api_url_var, self.cognito_domain_var, self.cognito_client_id_var):
-            var.trace_add("write", lambda *_args: self.schedule_local_config_save())
+        for var in (self.api_url_var, self.cognito_domain_var, self.cognito_client_id_var, self.callback_port_var, self.cognito_user_pool_id_var):
+            var.trace_add("write", lambda *_args: (self.refresh_connection_summary(), self.schedule_local_config_save()))
 
     def schedule_local_config_save(self) -> None:
         """Debounce local config writes so typing/pasting does not hammer the disk."""
@@ -870,6 +1146,8 @@ class SportsAdminApp:
             "admin_api_url": self.api_url_var.get().strip(),
             "cognito_domain": self.cognito_domain_var.get().strip(),
             "cognito_client_id": self.cognito_client_id_var.get().strip(),
+            "cognito_user_pool_id": self.cognito_user_pool_id_var.get().strip(),
+            "callback_port": self.callback_port_var.get().strip(),
             "updated_at": now_iso(),
         })
         try:
@@ -1055,6 +1333,11 @@ class SportsAdminApp:
         if value and value != self.cognito_client_id_var.get().strip():
             self.cognito_client_id_var.set(value)
             changed = True
+        value = str(discovered.get("cognito_user_pool_id") or "").strip()
+        if value and value != self.cognito_user_pool_id_var.get().strip():
+            self.cognito_user_pool_id_var.set(value)
+            changed = True
+        self.refresh_connection_summary()
         if changed:
             self.save_local_config()
 
