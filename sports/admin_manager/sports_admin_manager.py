@@ -28,6 +28,7 @@ import re
 import secrets
 import socket
 import socketserver
+import subprocess
 import threading
 import time
 import uuid
@@ -92,7 +93,7 @@ ACTIVITY_LOG_DISPLAY_LIMIT = 500
 
 APP_AUTHOR = "Tony Edward / VK2ALE"
 APP_SUPPORT = "OpenAI ChatGPT coding support"
-APP_VERSION_FALLBACK = "0.7.9-aws-profile-picker"
+APP_VERSION_FALLBACK = "0.7.10-monitor-centering"
 
 
 def read_app_version() -> str:
@@ -161,28 +162,139 @@ def aws_profile_combo_values(selected: str = "") -> list[str]:
     return values
 
 
+def _linux_xrandr_monitors() -> list[dict]:
+    """Return monitor rectangles from xrandr without adding extra dependencies.
+
+    Tk reports the combined virtual desktop size on many Linux multi-monitor
+    layouts. On stacked screens, centering on that virtual rectangle can place
+    the window halfway across both monitors. xrandr lets us centre on one real
+    monitor instead.
+    """
+    try:
+        output = subprocess.check_output(
+            ["xrandr", "--query"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=1.5,
+        )
+    except Exception:
+        return []
+
+    monitors: list[dict] = []
+    pattern = re.compile(r"^(\S+)\s+connected\b(?P<rest>.*)$")
+    geom_pattern = re.compile(r"(\d+)x(\d+)([+-]\d+)([+-]\d+)")
+
+    for line in output.splitlines():
+        match = pattern.match(line.strip())
+        if not match:
+            continue
+        rest = match.group("rest")
+        geom = geom_pattern.search(rest)
+        if not geom:
+            continue
+        width, height, x, y = geom.groups()
+        monitors.append({
+            "name": match.group(1),
+            "x": int(x),
+            "y": int(y),
+            "w": int(width),
+            "h": int(height),
+            "primary": " primary " in f" {rest} ",
+        })
+    return monitors
+
+
+def _windows_primary_work_area() -> dict | None:
+    """Return the Windows primary monitor work area, excluding taskbar."""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+
+        class RECT(ctypes.Structure):
+            _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long), ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+
+        rect = RECT()
+        SPI_GETWORKAREA = 0x0030
+        if ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(rect), 0):
+            return {"x": rect.left, "y": rect.top, "w": rect.right - rect.left, "h": rect.bottom - rect.top, "primary": True}
+    except Exception:
+        return None
+    return None
+
+
+def _contains_point(monitor: dict, x: int, y: int) -> bool:
+    return monitor["x"] <= x < monitor["x"] + monitor["w"] and monitor["y"] <= y < monitor["y"] + monitor["h"]
+
+
+def _screen_for_window(window, parent=None) -> dict:
+    """Pick a sensible real screen rectangle for placing a window."""
+    if os.name == "nt":
+        work = _windows_primary_work_area()
+        if work:
+            return work
+
+    monitors = _linux_xrandr_monitors() if os.name == "posix" else []
+    if monitors:
+        try:
+            if parent is not None:
+                parent.update_idletasks()
+                target_x = parent.winfo_rootx() + max(parent.winfo_width(), 1) // 2
+                target_y = parent.winfo_rooty() + max(parent.winfo_height(), 1) // 2
+            else:
+                # Open on the monitor where the user is working, which avoids
+                # the classic stacked-monitor virtual-desktop split.
+                target_x = window.winfo_pointerx()
+                target_y = window.winfo_pointery()
+            for monitor in monitors:
+                if _contains_point(monitor, target_x, target_y):
+                    return monitor
+        except Exception:
+            pass
+
+        for monitor in monitors:
+            if monitor.get("primary"):
+                return monitor
+        return monitors[0]
+
+    try:
+        return {"x": 0, "y": 0, "w": window.winfo_screenwidth(), "h": window.winfo_screenheight(), "primary": True}
+    except Exception:
+        return {"x": 0, "y": 0, "w": 1280, "h": 800, "primary": True}
+
+
+def _clamp_to_screen(x: int, y: int, width: int, height: int, screen: dict) -> tuple[int, int]:
+    min_x = int(screen["x"])
+    min_y = int(screen["y"])
+    max_x = int(screen["x"]) + max(int(screen["w"]) - width, 0)
+    max_y = int(screen["y"]) + max(int(screen["h"]) - height, 0)
+    return min(max(x, min_x), max_x), min(max(y, min_y), max_y)
+
+
 def center_window(window, width: int | None = None, height: int | None = None, parent=None) -> None:
-    """Centre a Tk/Toplevel window on the screen or over its parent."""
+    """Centre a Tk/Toplevel window on one real monitor, not the virtual desktop."""
     try:
         window.update_idletasks()
         if width is None:
             width = max(window.winfo_reqwidth(), window.winfo_width())
         if height is None:
             height = max(window.winfo_reqheight(), window.winfo_height())
+
+        screen = _screen_for_window(window, parent)
         if parent is not None:
             parent.update_idletasks()
             parent_x = parent.winfo_rootx()
             parent_y = parent.winfo_rooty()
-            parent_w = parent.winfo_width()
-            parent_h = parent.winfo_height()
-            x = parent_x + max((parent_w - width) // 2, 0)
-            y = parent_y + max((parent_h - height) // 2, 0)
+            parent_w = max(parent.winfo_width(), 1)
+            parent_h = max(parent.winfo_height(), 1)
+            x = parent_x + (parent_w - width) // 2
+            y = parent_y + (parent_h - height) // 2
         else:
-            screen_w = window.winfo_screenwidth()
-            screen_h = window.winfo_screenheight()
-            x = max((screen_w - width) // 2, 0)
-            y = max((screen_h - height) // 2, 0)
-        window.geometry(f"{width}x{height}+{x}+{y}")
+            x = int(screen["x"]) + max((int(screen["w"]) - width) // 2, 0)
+            y = int(screen["y"]) + max((int(screen["h"]) - height) // 2, 0)
+
+        x, y = _clamp_to_screen(x, y, width, height, screen)
+        window.geometry(f"{width}x{height}{x:+d}{y:+d}")
     except Exception:
         if width and height:
             window.geometry(f"{width}x{height}")
