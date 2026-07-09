@@ -11,7 +11,7 @@ The site is intentionally not just an elite-stats database. It links visitors to
 - Static frontend hosted from private S3 through CloudFront.
 - Custom-domain-ready Terraform for `sports.vk2ale.com`.
 - API Gateway HTTP API backed by Python Lambda.
-- DynamoDB tables for tournaments, pathway profiles, top-player spotlights, public suggestions, event hubs and official sporting bodies.
+- DynamoDB tables for tournaments, pathway profiles, top-player spotlights, public suggestions, event hubs, official sporting bodies and the admin activity log.
 - Python ingest Lambda for curated public-link seed data.
 - Sponsor-ready placements, deliberately empty until partners are approved.
 - Moderated public suggestion endpoint so users can help grow the curated directory without auto-publishing unverified links.
@@ -58,6 +58,7 @@ terraform output -raw site_url
 - `players`: now used as pathway profiles for this POC, rather than celebrity/player stats.
 - `top_players`: sport-genre spotlight cards for elite inspiration.
 - `suggestions`: moderated public suggestions waiting for review before publication.
+- `activity_log`: shared site-side audit log for local admin app sessions and changes.
 
 ## Curated directory update
 
@@ -73,7 +74,7 @@ The public site is installable as a Progressive Web App. The package includes:
 - PNG icons under `site/icons/`, including a maskable 512px icon.
 - An install button that appears only when the browser exposes the PWA install prompt.
 
-The public PWA does not add login or admin capability; admin management should remain in a separate microsite.
+The public PWA does not add login or admin capability; admin management stays outside the public site. The current admin path is the local Tkinter app using Cognito hosted login plus the protected admin API, with boto3 direct mode retained only as an owner/emergency fallback.
 
 ## Commercial direction
 
@@ -111,27 +112,54 @@ The deploy job validates, applies Terraform, seeds DynamoDB through the ingest L
 
 The frontend includes a `Suggest an official sporting body or pathway` form. Submissions go to the `suggestions` table as `pending_review`; they are not added to the public directory until reviewed. The recommended OpenAI-assisted research workflow is documented in `docs/COMMUNITY_DISCOVERY_PIPELINE.md`.
 
-Current version: 0.5.5-hamburger-only-drawer
+Current version: 0.7.0-cognito-admin-api
 
 ## UX polish
 
 The public PWA includes a section drawer and floating back-to-top control for quicker navigation on long mobile pages.
 ## Local admin manager
 
-This package includes a local-only Tkinter admin manager at:
+This package includes a Tkinter admin manager at:
 
 ```bash
 python3 sports/admin_manager/sports_admin_manager.py
 ```
 
-It uses your local AWS credentials through `boto3` and manages the DynamoDB catalogue directly. It can review public suggestions, approve suggestions into curated sporting-body or pathway records, edit top-player spotlight cards, and export/import catalogue JSON backups.
+Default mode is now **Cognito API mode**:
+
+```text
+local admin app → Cognito hosted login → protected /admin API → Lambda → DynamoDB
+```
+
+That lets delegated admins manage suggestions and curated records without receiving AWS credentials. The public website still has no login button and no admin view.
+
+After deploy, get the connection settings from Terraform:
+
+```bash
+terraform -chdir=sports/terraform output -raw admin_api_base_url
+terraform -chdir=sports/terraform output -raw admin_cognito_domain_url
+terraform -chdir=sports/terraform output -raw admin_cognito_user_pool_client_id
+terraform -chdir=sports/terraform output -raw admin_cognito_user_pool_id
+```
+
+Create the first admin user with the owner-only helper:
+
+```bash
+python3 sports/admin_manager/cognito_user_manager.py create \
+  --user-pool-id "$(terraform -chdir=sports/terraform output -raw admin_cognito_user_pool_id)" \
+  --email "you@example.com" \
+  --group PrimaryAdmins
+```
+
+Run the admin manager, fill in the Admin API, Cognito domain and client ID fields, then click **Login / connect**. The app opens Cognito hosted login in your browser and listens on `http://localhost:8765/callback` for the dev callback.
+
+The legacy `boto3_direct` mode remains available for the primary owner as an emergency fallback, but normal delegated admins should use Cognito API mode.
 
 Install local requirements when needed:
 
 ```bash
-python3 -m pip install boto3
+python3 -m pip install -r sports/admin_manager/requirements.txt
 sudo apt install python3-tk
 ```
 
-The tool deliberately keeps admin management off the public website for the POC.
-
+MFA is intentionally off in this dev build. TOTP/WebAuthn can be added later without putting login controls on the public PWA.

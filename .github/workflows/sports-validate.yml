@@ -54,7 +54,8 @@ jobs:
             sports/lambda/api/handler.py \
             sports/lambda/ingest/handler.py \
             sports/scripts/seed_data.py \
-            sports/admin_manager/sports_admin_manager.py
+            sports/admin_manager/sports_admin_manager.py \
+            sports/admin_manager/cognito_user_manager.py
 
       - name: JavaScript syntax check
         run: |
@@ -202,4 +203,8 @@ jobs:
             echo "- Site URL: $(terraform output -raw site_url)"
             echo "- CloudFront URL: $(terraform output -raw cloudfront_url)"
             echo "- API URL: $(terraform output -raw api_base_url)"
+            echo "- Admin API URL: $(terraform output -raw admin_api_base_url)"
+            echo "- Admin Cognito domain: $(terraform output -raw admin_cognito_domain_url)"
+            echo "- Admin Cognito client ID: $(terraform output -raw admin_cognito_user_pool_client_id)"
+            echo "- Admin Cognito user pool ID: $(terraform output -raw admin_cognito_user_pool_id)"
           } >> "${GITHUB_STEP_SUMMARY}"

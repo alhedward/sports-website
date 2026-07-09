@@ -51,3 +51,27 @@ variable "enable_daily_ingest_schedule" {
   type        = bool
   default     = false
 }
+
+variable "admin_callback_urls" {
+  description = "Allowed callback URLs for the local admin app Cognito hosted-login flow. localhost is allowed for development/native clients."
+  type        = list(string)
+  default     = ["http://localhost:8765/callback"]
+}
+
+variable "admin_logout_urls" {
+  description = "Allowed logout URLs for the local admin app Cognito hosted-login flow."
+  type        = list(string)
+  default     = ["http://localhost:8765/logout"]
+}
+
+variable "admin_cognito_domain_prefix" {
+  description = "Optional Cognito hosted-login domain prefix. Leave blank to derive one from project/environment/account."
+  type        = string
+  default     = ""
+}
+
+variable "admin_allowed_groups" {
+  description = "Cognito groups allowed to use the protected admin API."
+  type        = list(string)
+  default     = ["PrimaryAdmins", "Admins", "Editors"]
+}

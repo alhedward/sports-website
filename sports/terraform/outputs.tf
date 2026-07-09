@@ -90,3 +90,23 @@ output "suggestions_table_name" {
   description = "DynamoDB pending public suggestions table name."
   value       = aws_dynamodb_table.suggestions.name
 }
+
+output "admin_cognito_user_pool_id" {
+  description = "Cognito user pool ID for Sports admin users."
+  value       = aws_cognito_user_pool.admin.id
+}
+
+output "admin_cognito_user_pool_client_id" {
+  description = "Cognito app client ID for the local Sports admin manager."
+  value       = aws_cognito_user_pool_client.admin.id
+}
+
+output "admin_cognito_domain_url" {
+  description = "Cognito hosted-login domain URL for the local Sports admin manager."
+  value       = "https://${aws_cognito_user_pool_domain.admin.domain}.auth.${var.aws_region}.amazoncognito.com"
+}
+
+output "admin_api_base_url" {
+  description = "API base URL used by the Cognito-backed local admin manager."
+  value       = aws_apigatewayv2_api.http.api_endpoint
+}

@@ -99,3 +99,22 @@ resource "aws_dynamodb_table" "suggestions" {
 
   tags = local.common_tags
 }
+
+resource "aws_dynamodb_table" "activity_log" {
+  name         = "${local.name_prefix}-activity-log"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = merge(local.common_tags, {
+    Purpose = "Local admin activity audit log"
+  })
+}

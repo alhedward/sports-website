@@ -4,7 +4,7 @@ resource "aws_apigatewayv2_api" "http" {
 
   cors_configuration {
     allow_headers = ["Content-Type", "Authorization"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_origins = [var.cors_allow_origin]
     max_age       = 300
   }
@@ -59,4 +59,24 @@ resource "aws_lambda_permission" "api_gateway" {
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
+}
+
+resource "aws_apigatewayv2_authorizer" "admin_jwt" {
+  api_id           = aws_apigatewayv2_api.http.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "${local.name_prefix}-admin-cognito-jwt"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.admin.id]
+    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.admin.id}"
+  }
+}
+
+resource "aws_apigatewayv2_route" "admin_proxy" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "ANY /admin/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.admin_jwt.id
 }

@@ -1,8 +1,15 @@
-# Sports.vk2ale Local Admin Manager
+# Sports.vk2ale Admin Manager
 
-A local-only Tkinter administration tool for the Sports.vk2ale POC.
+A Tkinter administration tool for the Sports.vk2ale POC.
 
-It uses your local AWS credentials through `boto3` and edits the DynamoDB runtime catalogue directly. There is no public admin microsite and no Cognito dependency in this version.
+The default mode is now **Cognito API mode**:
+
+```text
+local admin app → Cognito hosted login → protected /admin API → Lambda → DynamoDB
+```
+
+That means delegated admins do **not** need AWS credentials on their machines.
+A `boto3_direct` mode is still available as an owner/emergency fallback while the project is in development.
 
 ## What it manages
 
@@ -17,50 +24,94 @@ It uses your local AWS credentials through `boto3` and edits the DynamoDB runtim
   - pathway profiles
   - tournaments
   - event hubs
-- Export all DynamoDB tables to JSON
+- Export all catalogue tables to JSON
 - Import a JSON catalogue backup and upsert by `id`
+- Write/read/export the shared site-side activity log
+
+The shared activity log is stored in DynamoDB and is only displayed inside this local admin tool, not on the public website/PWA.
 
 ## Requirements
 
 ```bash
-python3 -m pip install boto3
+python3 -m pip install -r sports/admin_manager/requirements.txt
 sudo apt install python3-tk
 ```
 
-You also need AWS credentials configured locally. For example:
+## Cognito API mode
+
+After Terraform deploy, get the admin config:
 
 ```bash
-aws configure sso
-# or
-aws configure --profile your-profile-name
+cd ~/git/sports-website/sports/terraform
+terraform output -raw admin_api_base_url
+terraform output -raw admin_cognito_domain_url
+terraform output -raw admin_cognito_user_pool_client_id
+terraform output -raw admin_cognito_user_pool_id
 ```
 
-## Run
-
-From the repository root:
+Run the app:
 
 ```bash
+cd ~/git/sports-website
 python3 sports/admin_manager/sports_admin_manager.py
 ```
 
-Or with a specific profile:
+In the top panel, select:
+
+```text
+Mode: cognito_api
+Admin API: <admin_api_base_url output>
+Cognito domain: <admin_cognito_domain_url output>
+Client ID: <admin_cognito_user_pool_client_id output>
+Callback port: 8765
+```
+
+Click **Login / connect**. The app opens the Cognito hosted login in your browser, listens on `http://localhost:8765/callback`, exchanges the authorization code with PKCE, and then calls the protected admin API with the Cognito token.
+
+You can also set these as environment variables:
+
+```bash
+export SPORTS_ADMIN_AUTH_MODE=cognito_api
+export SPORTS_ADMIN_API_URL="$(terraform -chdir=sports/terraform output -raw admin_api_base_url)"
+export SPORTS_ADMIN_COGNITO_DOMAIN="$(terraform -chdir=sports/terraform output -raw admin_cognito_domain_url)"
+export SPORTS_ADMIN_COGNITO_CLIENT_ID="$(terraform -chdir=sports/terraform output -raw admin_cognito_user_pool_client_id)"
+python3 sports/admin_manager/sports_admin_manager.py
+```
+
+## Creating the first admin user
+
+There is no public signup. Use the owner-only helper with your local AWS credentials:
+
+```bash
+cd ~/git/sports-website
+python3 sports/admin_manager/cognito_user_manager.py create \
+  --user-pool-id "$(terraform -chdir=sports/terraform output -raw admin_cognito_user_pool_id)" \
+  --email "you@example.com" \
+  --group PrimaryAdmins
+```
+
+Cognito sends a temporary-password email unless you pass `--suppress-email`.
+
+Other useful commands:
+
+```bash
+python3 sports/admin_manager/cognito_user_manager.py list --user-pool-id <pool-id>
+python3 sports/admin_manager/cognito_user_manager.py add-group --user-pool-id <pool-id> --email user@example.com --group Admins
+python3 sports/admin_manager/cognito_user_manager.py reset-password --user-pool-id <pool-id> --email user@example.com
+python3 sports/admin_manager/cognito_user_manager.py disable --user-pool-id <pool-id> --email user@example.com
+```
+
+Keep this helper for the primary owner/operator only. Normal admins should not receive AWS credentials.
+
+## boto3 direct fallback
+
+Select `boto3_direct` mode to edit DynamoDB directly using your local AWS credentials. This is intended only for the owner/emergency fallback during development.
 
 ```bash
 AWS_PROFILE=your-profile-name python3 sports/admin_manager/sports_admin_manager.py
 ```
 
-The defaults match the current POC:
-
-```text
-Region:      ap-southeast-2
-Project:     sports-aggregator
-Environment: dev
-Table prefix: sports-aggregator-dev
-```
-
-## IAM permissions
-
-The local AWS identity needs read/write access to these DynamoDB tables:
+The direct identity needs read/write access to these DynamoDB tables:
 
 ```text
 sports-aggregator-dev-suggestions
@@ -69,20 +120,11 @@ sports-aggregator-dev-top-players
 sports-aggregator-dev-players
 sports-aggregator-dev-tournaments
 sports-aggregator-dev-events
-```
-
-Minimum DynamoDB actions:
-
-```text
-dynamodb:DescribeTable
-dynamodb:Scan
-dynamodb:GetItem
-dynamodb:PutItem
-dynamodb:DeleteItem
+sports-aggregator-dev-activity-log
 ```
 
 ## Safety model
 
-Public users can submit suggestions, but those suggestions remain `pending_review` until you approve them locally. Approval creates/updates a curated record and marks the suggestion as `approved`. Rejection marks it as `rejected` but keeps the record for audit/review.
+Public users can submit suggestions, but suggestions remain `pending_review` until an authenticated admin approves them. Activity-log records now capture the Cognito actor details when using Cognito API mode.
 
-This is deliberately local-first so the POC has no public admin surface.
+MFA is intentionally off for this development build. The Cognito pool and local app flow are ready for adding TOTP/WebAuthn later.

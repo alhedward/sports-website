@@ -1,7 +1,7 @@
-aws_region      = "ap-southeast-2"
-project_name    = "global-sports-spotlight"
-environment     = "dev"
-lambda_runtime  = "python3.13"
+aws_region     = "ap-southeast-2"
+project_name   = "sports-aggregator"
+environment    = "dev"
+lambda_runtime = "python3.13"
 
 # POC custom domain. Terraform expects a public Route 53 hosted zone for vk2ale.com
 # in this AWS account, with the registrar delegated to the zone's name servers.
@@ -11,6 +11,13 @@ create_route53_records = true
 
 # Keep the API CORS origin locked to the POC frontend URL.
 cors_allow_origin = "https://sports.vk2ale.com"
+
+# Local admin manager Cognito hosted-login settings.
+# Cognito allows http://localhost callback URLs for local development/native-style clients.
+admin_callback_urls        = ["http://localhost:8765/callback"]
+admin_logout_urls          = ["http://localhost:8765/logout"]
+admin_allowed_groups       = ["PrimaryAdmins", "Admins", "Editors"]
+admin_cognito_domain_prefix = ""
 
 # Set true only when you have replaced the seed ingest with a real licensed data updater.
 enable_daily_ingest_schedule = false

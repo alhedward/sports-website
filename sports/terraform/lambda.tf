@@ -47,7 +47,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           aws_dynamodb_table.events.arn,
           aws_dynamodb_table.sport_bodies.arn,
           aws_dynamodb_table.top_players.arn,
-          aws_dynamodb_table.suggestions.arn
+          aws_dynamodb_table.suggestions.arn,
+          aws_dynamodb_table.activity_log.arn
         ]
       }
     ]
@@ -78,13 +79,17 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      TOURNAMENTS_TABLE  = aws_dynamodb_table.tournaments.name
-      PLAYERS_TABLE      = aws_dynamodb_table.players.name
-      EVENTS_TABLE       = aws_dynamodb_table.events.name
-      SPORT_BODIES_TABLE = aws_dynamodb_table.sport_bodies.name
-      TOP_PLAYERS_TABLE  = aws_dynamodb_table.top_players.name
-      SUGGESTIONS_TABLE  = aws_dynamodb_table.suggestions.name
-      CORS_ALLOW_ORIGIN  = var.cors_allow_origin
+      TOURNAMENTS_TABLE    = aws_dynamodb_table.tournaments.name
+      PLAYERS_TABLE        = aws_dynamodb_table.players.name
+      EVENTS_TABLE         = aws_dynamodb_table.events.name
+      SPORT_BODIES_TABLE   = aws_dynamodb_table.sport_bodies.name
+      TOP_PLAYERS_TABLE    = aws_dynamodb_table.top_players.name
+      SUGGESTIONS_TABLE    = aws_dynamodb_table.suggestions.name
+      ACTIVITY_LOG_TABLE   = aws_dynamodb_table.activity_log.name
+      ADMIN_ALLOWED_GROUPS = join(",", var.admin_allowed_groups)
+      ADMIN_USER_POOL_ID   = aws_cognito_user_pool.admin.id
+      ADMIN_APP_CLIENT_ID  = aws_cognito_user_pool_client.admin.id
+      CORS_ALLOW_ORIGIN    = var.cors_allow_origin
     }
   }
 

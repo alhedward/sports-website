@@ -79,6 +79,7 @@ A more restricted deployment role needs permissions for:
 - DynamoDB tables
 - Lambda functions and permissions
 - API Gateway HTTP API
+- Cognito user pool, hosted-login domain, app client and groups
 - IAM Lambda execution role and policies
 - EventBridge schedule/rules if daily ingest is enabled
 - CloudWatch Logs
@@ -93,7 +94,7 @@ The deploy job:
 4. Runs `terraform plan` and `terraform apply`.
 5. Invokes the ingest Lambda to seed public sports data.
 6. Invalidates the CloudFront cache.
-7. Writes the site/API URLs to the GitHub Actions step summary.
+7. Writes the site/API URLs and Cognito admin config to the GitHub Actions step summary.
 
 ## Local helper interaction
 

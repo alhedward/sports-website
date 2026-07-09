@@ -2,9 +2,11 @@
 """
 Sports.vk2ale Local Admin Manager
 
-A local-only Tkinter tool for administering the Sports.vk2ale DynamoDB catalogue.
-It uses your local AWS credentials/profile through boto3. It does not expose a
-public admin website and does not require Cognito.
+A Tkinter tool for administering the Sports.vk2ale catalogue.
+
+Default mode uses Cognito hosted login plus the protected admin API, so delegated
+admins do not need AWS credentials. A boto3 direct mode remains available as an
+owner/emergency fallback while the project is in development.
 
 Run:
   python3 sports/admin_manager/sports_admin_manager.py
@@ -15,11 +17,23 @@ Optional:
 
 from __future__ import annotations
 
+import base64
+import getpass
+import hashlib
+import http.server
 import json
 import os
 import re
+import secrets
+import socket
+import socketserver
 import threading
+import time
+import uuid
 import traceback
+import urllib.error
+import urllib.parse
+import urllib.request
 import webbrowser
 from copy import deepcopy
 from dataclasses import dataclass
@@ -42,6 +56,15 @@ DEFAULT_REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
 DEFAULT_PROJECT = os.environ.get("SPORTS_PROJECT_NAME", "sports-aggregator")
 DEFAULT_ENV = os.environ.get("SPORTS_ENVIRONMENT", "dev")
 DEFAULT_PROFILE = os.environ.get("AWS_PROFILE", "")
+DEFAULT_AUTH_MODE = os.environ.get("SPORTS_ADMIN_AUTH_MODE", "cognito_api")
+DEFAULT_ADMIN_API_URL = os.environ.get("SPORTS_ADMIN_API_URL", "")
+DEFAULT_COGNITO_DOMAIN = os.environ.get("SPORTS_ADMIN_COGNITO_DOMAIN", "")
+DEFAULT_COGNITO_CLIENT_ID = os.environ.get("SPORTS_ADMIN_COGNITO_CLIENT_ID", "")
+DEFAULT_CALLBACK_PORT = os.environ.get("SPORTS_ADMIN_CALLBACK_PORT", "8765")
+APP_VERSION_FILE = Path(__file__).resolve().parents[1] / "VERSION"
+ACTIVITY_LOG_COLLECTION = "activity_log"
+ACTIVITY_LOG_SUFFIX = "activity-log"
+ACTIVITY_LOG_DISPLAY_LIMIT = 500
 
 COLLECTIONS = {
     "suggestions": {
@@ -139,8 +162,15 @@ class AwsConfig:
         return f"{self.project_name}-{self.environment}"
 
     def table_name(self, collection: str) -> str:
-        suffix = COLLECTIONS[collection]["suffix"]
+        if collection == ACTIVITY_LOG_COLLECTION:
+            suffix = ACTIVITY_LOG_SUFFIX
+        else:
+            suffix = COLLECTIONS[collection]["suffix"]
         return f"{self.prefix}-{suffix}"
+
+    @property
+    def activity_log_table_name(self) -> str:
+        return self.table_name(ACTIVITY_LOG_COLLECTION)
 
 
 class DynamoAdminClient:
@@ -188,6 +218,62 @@ class DynamoAdminClient:
     def delete_item(self, collection: str, item_id: str) -> None:
         self.table(collection).delete_item(Key={"id": item_id})
 
+    def activity_table(self):
+        return self.ddb.Table(self.config.activity_log_table_name)
+
+    def scan_activity_log(self, limit: int = ACTIVITY_LOG_DISPLAY_LIMIT) -> list[dict]:
+        items: list[dict] = []
+        kwargs: dict = {}
+        table = self.activity_table()
+        while True:
+            response = table.scan(**kwargs)
+            items.extend(response.get("Items", []))
+            last_key = response.get("LastEvaluatedKey")
+            if not last_key:
+                break
+            kwargs["ExclusiveStartKey"] = last_key
+        items.sort(key=lambda item: str(item.get("created_at", "")), reverse=True)
+        return items[:limit]
+
+    def write_activity(
+        self,
+        action: str,
+        summary: str,
+        *,
+        details: dict | None = None,
+        actor_arn: str | None = None,
+    ) -> dict:
+        created_at = now_iso()
+        actor = actor_arn or ""
+        try:
+            if not actor:
+                actor = self.caller_identity().get("Arn", "")
+        except Exception:
+            actor = ""
+        version = "unknown"
+        try:
+            version = APP_VERSION_FILE.read_text(encoding="utf-8").strip() or "unknown"
+        except Exception:
+            pass
+        item = {
+            "id": f"log-{created_at.replace(':', '').replace('.', '-')}-{uuid.uuid4().hex[:10]}",
+            "created_at": created_at,
+            "action": action,
+            "summary": summary,
+            "actor_arn": actor,
+            "aws_profile": self.config.profile or "default",
+            "aws_region": self.config.region,
+            "project_name": self.config.project_name,
+            "environment": self.config.environment,
+            "host": socket.gethostname(),
+            "local_user": getpass.getuser(),
+            "app_version": version,
+        }
+        if details:
+            item["details"] = details
+        self.activity_table().put_item(Item=normalize_decimal(item))
+        return item
+
     def update_suggestion_status(self, suggestion_id: str, status: str, extra: dict | None = None) -> None:
         item = self.get_item("suggestions", suggestion_id)
         if not item:
@@ -198,6 +284,217 @@ class DynamoAdminClient:
         if extra:
             item.update(extra)
         self.table("suggestions").put_item(Item=normalize_decimal(item))
+
+
+@dataclass
+class CognitoApiConfig:
+    api_base_url: str
+    cognito_domain: str
+    client_id: str
+    callback_port: int = 8765
+
+    @property
+    def redirect_uri(self) -> str:
+        return f"http://localhost:{self.callback_port}/callback"
+
+
+def _b64url_no_padding(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _decode_jwt_unverified(token: str) -> dict:
+    try:
+        parts = token.split(".")
+        if len(parts) < 2:
+            return {}
+        payload = parts[1] + "=" * (-len(parts[1]) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload.encode("ascii")).decode("utf-8"))
+    except Exception:
+        return {}
+
+
+class _OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
+    server_version = "SportsAdminOAuthCallback/1.0"
+
+    def log_message(self, fmt, *args):  # keep Tkinter console clean
+        return
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        params = urllib.parse.parse_qs(parsed.query)
+        self.server.auth_code = (params.get("code") or [""])[0]
+        self.server.auth_state = (params.get("state") or [""])[0]
+        self.server.auth_error = (params.get("error") or [""])[0]
+        self.server.auth_error_description = (params.get("error_description") or [""])[0]
+        body = b"<html><body><h1>Sports admin login complete</h1><p>You can close this browser tab and return to the admin manager.</p></body></html>"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+class CognitoPkceAuth:
+    def __init__(self, config: CognitoApiConfig) -> None:
+        self.config = config
+        self.tokens: dict = {}
+        self.claims: dict = {}
+
+    @property
+    def domain(self) -> str:
+        value = self.config.cognito_domain.strip().rstrip("/")
+        if not value:
+            raise RuntimeError("Cognito domain is required for Cognito API mode.")
+        if not value.startswith(("https://", "http://")):
+            value = "https://" + value
+        return value
+
+    def login(self, timeout_seconds: int = 180) -> dict:
+        if not self.config.client_id.strip():
+            raise RuntimeError("Cognito app client ID is required for Cognito API mode.")
+        verifier = _b64url_no_padding(secrets.token_bytes(48))
+        challenge = _b64url_no_padding(hashlib.sha256(verifier.encode("ascii")).digest())
+        state = secrets.token_urlsafe(24)
+        params = {
+            "client_id": self.config.client_id.strip(),
+            "response_type": "code",
+            "scope": "openid email profile",
+            "redirect_uri": self.config.redirect_uri,
+            "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+        }
+        auth_url = self.domain + "/oauth2/authorize?" + urllib.parse.urlencode(params)
+
+        class ReusableTCPServer(socketserver.TCPServer):
+            allow_reuse_address = True
+
+        with ReusableTCPServer(("127.0.0.1", self.config.callback_port), _OAuthCallbackHandler) as server:
+            server.auth_code = ""
+            server.auth_state = ""
+            server.auth_error = ""
+            server.auth_error_description = ""
+            server.timeout = 1
+            webbrowser.open(auth_url)
+            deadline = time.monotonic() + timeout_seconds
+            while time.monotonic() < deadline and not (server.auth_code or server.auth_error):
+                server.handle_request()
+            if server.auth_error:
+                raise RuntimeError(f"Cognito login failed: {server.auth_error} {server.auth_error_description}")
+            if not server.auth_code:
+                raise RuntimeError("Timed out waiting for Cognito login callback.")
+            if server.auth_state != state:
+                raise RuntimeError("Cognito login state mismatch. Authentication aborted.")
+            self.tokens = self.exchange_code(server.auth_code, verifier)
+            self.claims = _decode_jwt_unverified(self.tokens.get("id_token") or self.tokens.get("access_token") or "")
+            return self.tokens
+
+    def exchange_code(self, code: str, verifier: str) -> dict:
+        data = urllib.parse.urlencode({
+            "grant_type": "authorization_code",
+            "client_id": self.config.client_id.strip(),
+            "code": code,
+            "redirect_uri": self.config.redirect_uri,
+            "code_verifier": verifier,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            self.domain + "/oauth2/token",
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Token exchange failed: HTTP {exc.code}: {detail}") from exc
+
+    def authorization_header(self) -> str:
+        token = self.tokens.get("access_token") or self.tokens.get("id_token")
+        if not token:
+            self.login()
+            token = self.tokens.get("access_token") or self.tokens.get("id_token")
+        return f"Bearer {token}"
+
+
+class ApiAdminClient:
+    """Admin client that uses Cognito tokens and the protected /admin API."""
+
+    def __init__(self, config: CognitoApiConfig) -> None:
+        if not config.api_base_url.strip():
+            raise RuntimeError("Admin API base URL is required for Cognito API mode.")
+        self.config = config
+        self.auth = CognitoPkceAuth(config)
+        self.auth.login()
+        self.api_base_url = config.api_base_url.strip().rstrip("/")
+
+    def request(self, method: str, path: str, payload: dict | None = None):
+        url = self.api_base_url + path
+        data = None
+        headers = {
+            "Authorization": self.auth.authorization_header(),
+            "Accept": "application/json",
+        }
+        if payload is not None:
+            data = json.dumps(payload, cls=JsonDecimalEncoder).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        request = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                text = response.read().decode("utf-8")
+                return json.loads(text) if text else None
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(detail)
+                message = parsed.get("message") or detail
+            except Exception:
+                message = detail
+            raise RuntimeError(f"Admin API {method} {path} failed: HTTP {exc.code}: {message}") from exc
+
+    def caller_identity(self) -> dict:
+        result = self.request("GET", "/admin/me")
+        actor = result.get("actor", {}) if isinstance(result, dict) else {}
+        name = actor.get("email") or actor.get("username") or actor.get("sub") or "cognito-admin"
+        return {"Arn": f"cognito:{name}", "Actor": actor}
+
+    def scan_all(self, collection: str) -> list[dict]:
+        return self.request("GET", f"/admin/collections/{urllib.parse.quote(collection)}") or []
+
+    def get_item(self, collection: str, item_id: str) -> dict | None:
+        return self.request("GET", f"/admin/collections/{urllib.parse.quote(collection)}/{urllib.parse.quote(item_id)}")
+
+    def put_item(self, collection: str, item: dict) -> None:
+        if not item.get("id"):
+            raise ValueError("Item must contain an id")
+        self.request("PUT", f"/admin/collections/{urllib.parse.quote(collection)}/{urllib.parse.quote(str(item['id']))}", item)
+
+    def delete_item(self, collection: str, item_id: str) -> None:
+        self.request("DELETE", f"/admin/collections/{urllib.parse.quote(collection)}/{urllib.parse.quote(item_id)}")
+
+    def scan_activity_log(self, limit: int = ACTIVITY_LOG_DISPLAY_LIMIT) -> list[dict]:
+        return self.request("GET", f"/admin/activity-log?limit={int(limit)}") or []
+
+    def write_activity(
+        self,
+        action: str,
+        summary: str,
+        *,
+        details: dict | None = None,
+        actor_arn: str | None = None,
+    ) -> dict:
+        return self.request("POST", "/admin/activity-log", {
+            "action": action,
+            "summary": summary,
+            "details": details or {},
+        })
+
+    def update_suggestion_status(self, suggestion_id: str, status: str, extra: dict | None = None) -> None:
+        self.request("POST", f"/admin/suggestions/{urllib.parse.quote(suggestion_id)}/status", {
+            "status": status,
+            "extra": extra or {},
+        })
 
 
 class JsonEditor(Toplevel):
@@ -246,11 +543,19 @@ class SportsAdminApp:
         self.items: dict[str, list[dict]] = {key: [] for key in COLLECTIONS}
         self.selected_suggestion: dict | None = None
         self.selected_record: dict | None = None
+        self.activity_items: list[dict] = []
+        self.selected_activity: dict | None = None
+        self.actor_arn = ""
 
         self.profile_var = StringVar(value=DEFAULT_PROFILE)
         self.region_var = StringVar(value=DEFAULT_REGION)
         self.project_var = StringVar(value=DEFAULT_PROJECT)
         self.env_var = StringVar(value=DEFAULT_ENV)
+        self.auth_mode_var = StringVar(value=DEFAULT_AUTH_MODE)
+        self.api_url_var = StringVar(value=DEFAULT_ADMIN_API_URL)
+        self.cognito_domain_var = StringVar(value=DEFAULT_COGNITO_DOMAIN)
+        self.cognito_client_id_var = StringVar(value=DEFAULT_COGNITO_CLIENT_ID)
+        self.callback_port_var = StringVar(value=DEFAULT_CALLBACK_PORT)
         self.status_filter_var = StringVar(value="pending_review")
         self.record_collection_var = StringVar(value="sport_bodies")
         self.record_search_var = StringVar(value="")
@@ -262,21 +567,40 @@ class SportsAdminApp:
     def build_ui(self) -> None:
         top = ttk.Frame(self.root, padding=10)
         top.pack(side=TOP, fill=X)
-        ttk.Label(top, text="AWS profile").grid(row=0, column=0, sticky="w")
-        ttk.Entry(top, textvariable=self.profile_var, width=18).grid(row=0, column=1, padx=(4, 12), sticky="w")
-        ttk.Label(top, text="Region").grid(row=0, column=2, sticky="w")
-        ttk.Entry(top, textvariable=self.region_var, width=18).grid(row=0, column=3, padx=(4, 12), sticky="w")
-        ttk.Label(top, text="Project").grid(row=0, column=4, sticky="w")
-        ttk.Entry(top, textvariable=self.project_var, width=22).grid(row=0, column=5, padx=(4, 12), sticky="w")
-        ttk.Label(top, text="Environment").grid(row=0, column=6, sticky="w")
-        ttk.Entry(top, textvariable=self.env_var, width=10).grid(row=0, column=7, padx=(4, 12), sticky="w")
-        ttk.Button(top, text="Connect / refresh", command=self.connect_and_refresh).grid(row=0, column=8, sticky="e")
-        top.columnconfigure(9, weight=1)
+        ttk.Label(top, text="Mode").grid(row=0, column=0, sticky="w")
+        ttk.Combobox(
+            top,
+            textvariable=self.auth_mode_var,
+            values=["cognito_api", "boto3_direct"],
+            width=14,
+            state="readonly",
+        ).grid(row=0, column=1, padx=(4, 12), sticky="w")
+        ttk.Label(top, text="AWS profile").grid(row=0, column=2, sticky="w")
+        ttk.Entry(top, textvariable=self.profile_var, width=14).grid(row=0, column=3, padx=(4, 12), sticky="w")
+        ttk.Label(top, text="Region").grid(row=0, column=4, sticky="w")
+        ttk.Entry(top, textvariable=self.region_var, width=16).grid(row=0, column=5, padx=(4, 12), sticky="w")
+        ttk.Label(top, text="Project").grid(row=0, column=6, sticky="w")
+        ttk.Entry(top, textvariable=self.project_var, width=18).grid(row=0, column=7, padx=(4, 12), sticky="w")
+        ttk.Label(top, text="Env").grid(row=0, column=8, sticky="w")
+        ttk.Entry(top, textvariable=self.env_var, width=8).grid(row=0, column=9, padx=(4, 12), sticky="w")
+        ttk.Button(top, text="Login / connect", command=self.connect_and_refresh).grid(row=0, column=10, sticky="e")
+
+        ttk.Label(top, text="Admin API").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(top, textvariable=self.api_url_var, width=42).grid(row=1, column=1, columnspan=3, padx=(4, 12), sticky="ew", pady=(8, 0))
+        ttk.Label(top, text="Cognito domain").grid(row=1, column=4, sticky="w", pady=(8, 0))
+        ttk.Entry(top, textvariable=self.cognito_domain_var, width=42).grid(row=1, column=5, columnspan=3, padx=(4, 12), sticky="ew", pady=(8, 0))
+        ttk.Label(top, text="Client ID").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(top, textvariable=self.cognito_client_id_var, width=42).grid(row=2, column=1, columnspan=3, padx=(4, 12), sticky="ew", pady=(8, 0))
+        ttk.Label(top, text="Callback port").grid(row=2, column=4, sticky="w", pady=(8, 0))
+        ttk.Entry(top, textvariable=self.callback_port_var, width=8).grid(row=2, column=5, padx=(4, 12), sticky="w", pady=(8, 0))
+        top.columnconfigure(3, weight=1)
+        top.columnconfigure(7, weight=1)
 
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=BOTH, expand=True, padx=10, pady=(0, 10))
         self.build_suggestions_tab()
         self.build_records_tab()
+        self.build_activity_tab()
         self.build_backup_tab()
 
         bottom = ttk.Frame(self.root, padding=(10, 0, 10, 10))
@@ -381,6 +705,48 @@ class SportsAdminApp:
         self.record_detail = Text(right, height=18, wrap="word")
         self.record_detail.pack(fill=BOTH, expand=True, pady=(6, 0))
 
+    def build_activity_tab(self) -> None:
+        tab = ttk.Frame(self.notebook, padding=10)
+        self.notebook.add(tab, text="Activity log")
+
+        info = (
+            "Shared site-side activity log stored in DynamoDB. "
+            "This is not shown on the public website; it is only read by local admin apps."
+        )
+        ttk.Label(tab, text=info, wraplength=980, justify="left").pack(anchor="w")
+
+        toolbar = ttk.Frame(tab)
+        toolbar.pack(fill=X, pady=(10, 8))
+        ttk.Button(toolbar, text="Refresh shared log", command=self.refresh_activity_log).pack(side=LEFT)
+        ttk.Button(toolbar, text="Export activity log", command=self.export_activity_log).pack(side=LEFT, padx=(8, 0))
+
+        main = ttk.Panedwindow(tab, orient="horizontal")
+        main.pack(fill=BOTH, expand=True)
+
+        left = ttk.Frame(main)
+        main.add(left, weight=3)
+        columns = ("created_at", "action", "actor", "summary")
+        self.activity_tree = ttk.Treeview(left, columns=columns, show="headings", selectmode="browse")
+        for col, label, width in [
+            ("created_at", "UTC time", 210),
+            ("action", "Action", 170),
+            ("actor", "Actor", 330),
+            ("summary", "Summary", 360),
+        ]:
+            self.activity_tree.heading(col, text=label)
+            self.activity_tree.column(col, width=width, anchor="w")
+        self.activity_tree.pack(side=LEFT, fill=BOTH, expand=True)
+        self.activity_tree.bind("<<TreeviewSelect>>", self.on_activity_select)
+        yscroll = ttk.Scrollbar(left, orient="vertical", command=self.activity_tree.yview)
+        yscroll.pack(side=RIGHT, fill=Y)
+        self.activity_tree.configure(yscrollcommand=yscroll.set)
+
+        right = ttk.Frame(main)
+        main.add(right, weight=2)
+        ttk.Label(right, text="Activity detail").pack(anchor="w")
+        self.activity_detail = Text(right, height=18, wrap="word")
+        self.activity_detail.pack(fill=BOTH, expand=True, pady=(6, 0))
+
     def build_backup_tab(self) -> None:
         tab = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(tab, text="Backup / import")
@@ -397,7 +763,7 @@ class SportsAdminApp:
         ttk.Button(buttons, text="Export all tables to JSON", command=self.export_all).pack(side=LEFT)
         ttk.Button(buttons, text="Import JSON into selected tables", command=self.import_json).pack(side=LEFT, padx=(10, 0))
 
-        ttk.Label(tab, text="Activity log").pack(anchor="w", pady=(10, 4))
+        ttk.Label(tab, text="Local session status / errors").pack(anchor="w", pady=(10, 4))
         self.log_text = Text(tab, height=24, wrap="word")
         self.log_text.pack(fill=BOTH, expand=True)
 
@@ -415,6 +781,18 @@ class SportsAdminApp:
             region=self.region_var.get().strip() or DEFAULT_REGION,
             project_name=self.project_var.get().strip() or DEFAULT_PROJECT,
             environment=self.env_var.get().strip() or DEFAULT_ENV,
+        )
+
+    def get_api_config(self) -> CognitoApiConfig:
+        try:
+            port = int(self.callback_port_var.get().strip() or DEFAULT_CALLBACK_PORT)
+        except ValueError as exc:
+            raise ValueError("Callback port must be a number") from exc
+        return CognitoApiConfig(
+            api_base_url=self.api_url_var.get().strip(),
+            cognito_domain=self.cognito_domain_var.get().strip(),
+            client_id=self.cognito_client_id_var.get().strip(),
+            callback_port=port,
         )
 
     def run_background(self, label: str, func, on_done=None) -> None:
@@ -441,18 +819,48 @@ class SportsAdminApp:
 
     def connect_and_refresh(self) -> None:
         def task():
-            config = self.get_config()
-            client = DynamoAdminClient(config)
+            mode = self.auth_mode_var.get().strip() or "cognito_api"
+            if mode == "boto3_direct":
+                config = self.get_config()
+                client = DynamoAdminClient(config)
+                connection_details = {
+                    "mode": mode,
+                    "table_prefix": config.prefix,
+                    "activity_log_table": config.activity_log_table_name,
+                }
+            else:
+                client = ApiAdminClient(self.get_api_config())
+                connection_details = {
+                    "mode": mode,
+                    "api_base_url": client.api_base_url,
+                    "callback_port": client.config.callback_port,
+                }
             identity = client.caller_identity()
             # Eagerly scan small catalogue tables for a clear connection test.
             items = {collection: client.scan_all(collection) for collection in COLLECTIONS}
-            return client, identity, items
+            activity_error = ""
+            activity_items: list[dict] = []
+            try:
+                client.write_activity(
+                    "admin_app_started",
+                    "Local admin app connected",
+                    actor_arn=identity.get("Arn", ""),
+                    details=connection_details,
+                )
+                activity_items = client.scan_activity_log()
+            except Exception as exc:
+                activity_error = str(exc)
+            return client, identity, items, activity_items, activity_error
 
         def done(result):
-            self.client, identity, self.items = result
-            self.log(f"Connected as {identity.get('Arn')} using prefix {self.client.config.prefix}.")
+            self.client, identity, self.items, self.activity_items, activity_error = result
+            self.actor_arn = identity.get("Arn", "")
+            self.log(f"Connected as {self.actor_arn} using prefix {self.client.config.prefix}.")
+            if activity_error:
+                self.log(f"Shared activity log unavailable: {activity_error}")
             self.populate_suggestions()
             self.populate_records()
+            self.populate_activity_log()
 
         self.run_background("Connect and refresh", task, done)
 
@@ -460,6 +868,90 @@ class SportsAdminApp:
         if not self.client:
             raise RuntimeError("Connect to AWS first.")
         return self.client
+
+    def write_activity_safe(self, action: str, summary: str, details: dict | None = None) -> None:
+        """Best-effort write to the shared site-side activity log."""
+        client = self.require_client()
+        client.write_activity(action, summary, details=details, actor_arn=self.actor_arn)
+
+    def refresh_activity_log(self) -> None:
+        def task():
+            client = self.require_client()
+            return client.scan_activity_log()
+
+        def done(rows):
+            self.activity_items = rows
+            self.populate_activity_log()
+            self.log(f"Loaded {len(rows)} shared activity log entries from {self.require_client().config.activity_log_table_name}.")
+
+        self.run_background("Refresh shared activity log", task, done)
+
+    def populate_activity_log(self) -> None:
+        if not hasattr(self, "activity_tree"):
+            return
+        for row in self.activity_tree.get_children():
+            self.activity_tree.delete(row)
+        rows = self.activity_items or []
+        for idx, item in enumerate(rows):
+            actor = str(item.get("actor_arn", ""))
+            actor_short = actor.split("/")[-1] if actor else ""
+            self.activity_tree.insert(
+                "",
+                END,
+                iid=str(idx),
+                values=(
+                    item.get("created_at", ""),
+                    item.get("action", ""),
+                    actor_short,
+                    item.get("summary", ""),
+                ),
+            )
+        self.selected_activity = None
+        self.activity_detail.delete("1.0", END)
+
+    def on_activity_select(self, _event=None) -> None:
+        sel = self.activity_tree.selection()
+        if not sel:
+            return
+        item = self.activity_items[int(sel[0])]
+        self.selected_activity = item
+        self.activity_detail.delete("1.0", END)
+        self.activity_detail.insert("1.0", json.dumps(item, cls=JsonDecimalEncoder, indent=2, sort_keys=True))
+
+    def export_activity_log(self) -> None:
+        if not self.client:
+            messagebox.showerror(APP_TITLE, "Connect to AWS first.")
+            return
+        default = Path.home() / "Downloads" / f"sports-activity-log-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
+        path = filedialog.asksaveasfilename(
+            title="Export shared activity log",
+            initialfile=default.name,
+            initialdir=str(default.parent),
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+
+        def task():
+            client = self.require_client()
+            rows = client.scan_activity_log(limit=10000)
+            Path(path).write_text(json.dumps(rows, cls=JsonDecimalEncoder, indent=2, sort_keys=True), encoding="utf-8")
+            client.write_activity(
+                "activity_log_exported",
+                "Shared activity log exported locally",
+                actor_arn=self.actor_arn,
+                details={"export_path": str(path), "entry_count": len(rows)},
+            )
+            return path, client.scan_activity_log()
+
+        def done(result):
+            saved_path, rows = result
+            self.activity_items = rows
+            self.populate_activity_log()
+            self.log(f"Exported shared activity log to {saved_path}")
+
+        self.run_background("Export shared activity log", task, done)
 
     def refresh_collection(self, collection: str) -> None:
         def task():
@@ -601,7 +1093,14 @@ class SportsAdminApp:
                 "approved",
                 {"approved_collection": "sport_bodies", "approved_item_id": payload["id"]},
             )
+            client.write_activity(
+                "suggestion_approved",
+                f"Approved suggestion as official body: {payload.get('name', payload['id'])}",
+                actor_arn=self.actor_arn,
+                details={"suggestion_id": suggestion["id"], "collection": "sport_bodies", "item_id": payload["id"]},
+            )
             self.refresh_after_approval("sport_bodies")
+            self.refresh_activity_log()
 
         JsonEditor(self.root, "Approve suggestion as official body", initial, save)
 
@@ -621,7 +1120,14 @@ class SportsAdminApp:
                 "approved",
                 {"approved_collection": "pathways", "approved_item_id": payload["id"]},
             )
+            client.write_activity(
+                "suggestion_approved",
+                f"Approved suggestion as pathway: {payload.get('name', payload['id'])}",
+                actor_arn=self.actor_arn,
+                details={"suggestion_id": suggestion["id"], "collection": "pathways", "item_id": payload["id"]},
+            )
             self.refresh_after_approval("pathways")
+            self.refresh_activity_log()
 
         JsonEditor(self.root, "Approve suggestion as pathway", initial, save)
 
@@ -640,10 +1146,19 @@ class SportsAdminApp:
             return
 
         def task():
-            self.require_client().update_suggestion_status(suggestion["id"], "rejected")
-            return None
+            client = self.require_client()
+            client.update_suggestion_status(suggestion["id"], "rejected")
+            client.write_activity(
+                "suggestion_rejected",
+                f"Rejected suggestion: {suggestion.get('name', suggestion['id'])}",
+                actor_arn=self.actor_arn,
+                details={"suggestion_id": suggestion["id"]},
+            )
+            return client.scan_activity_log()
 
-        def done(_):
+        def done(rows):
+            self.activity_items = rows
+            self.populate_activity_log()
             self.log("Suggestion rejected.")
             self.refresh_collection("suggestions")
 
@@ -659,10 +1174,19 @@ class SportsAdminApp:
             return
 
         def task():
-            self.require_client().delete_item("suggestions", suggestion["id"])
-            return None
+            client = self.require_client()
+            client.delete_item("suggestions", suggestion["id"])
+            client.write_activity(
+                "suggestion_deleted",
+                f"Deleted suggestion: {suggestion.get('name', suggestion['id'])}",
+                actor_arn=self.actor_arn,
+                details={"suggestion_id": suggestion["id"]},
+            )
+            return client.scan_activity_log()
 
-        def done(_):
+        def done(rows):
+            self.activity_items = rows
+            self.populate_activity_log()
             self.log("Suggestion deleted.")
             self.refresh_collection("suggestions")
 
@@ -734,9 +1258,17 @@ class SportsAdminApp:
         initial = self.new_record_template(collection)
 
         def save(payload: dict) -> None:
-            self.require_client().put_item(collection, payload)
+            client = self.require_client()
+            client.put_item(collection, payload)
+            client.write_activity(
+                "record_created",
+                f"Created {collection} record: {payload.get('name', payload['id'])}",
+                actor_arn=self.actor_arn,
+                details={"collection": collection, "item_id": payload["id"]},
+            )
             self.log(f"Saved new {collection} record: {payload['id']}")
             self.refresh_collection(collection)
+            self.refresh_activity_log()
 
         JsonEditor(self.root, f"New {COLLECTIONS[collection]['label']} record", initial, save)
 
@@ -749,9 +1281,17 @@ class SportsAdminApp:
             return
 
         def save(payload: dict) -> None:
-            self.require_client().put_item(collection, payload)
+            client = self.require_client()
+            client.put_item(collection, payload)
+            client.write_activity(
+                "record_updated",
+                f"Updated {collection} record: {payload.get('name', payload['id'])}",
+                actor_arn=self.actor_arn,
+                details={"collection": collection, "item_id": payload["id"]},
+            )
             self.log(f"Saved {collection} record: {payload['id']}")
             self.refresh_collection(collection)
+            self.refresh_activity_log()
 
         JsonEditor(self.root, f"Edit {item.get('id')}", item, save)
 
@@ -766,10 +1306,19 @@ class SportsAdminApp:
             return
 
         def task():
-            self.require_client().delete_item(collection, item["id"])
-            return None
+            client = self.require_client()
+            client.delete_item(collection, item["id"])
+            client.write_activity(
+                "record_deleted",
+                f"Deleted {collection} record: {item.get('name', item['id'])}",
+                actor_arn=self.actor_arn,
+                details={"collection": collection, "item_id": item["id"]},
+            )
+            return client.scan_activity_log()
 
-        def done(_):
+        def done(rows):
+            self.activity_items = rows
+            self.populate_activity_log()
             self.log(f"Deleted {collection} record: {item['id']}")
             self.refresh_collection(collection)
 
@@ -794,9 +1343,18 @@ class SportsAdminApp:
             client = self.require_client()
             data = {collection: client.scan_all(collection) for collection in COLLECTIONS}
             Path(path).write_text(json.dumps(data, cls=JsonDecimalEncoder, indent=2, sort_keys=True), encoding="utf-8")
-            return path
+            client.write_activity(
+                "catalogue_exported",
+                "Catalogue tables exported locally",
+                actor_arn=self.actor_arn,
+                details={"export_path": str(path), "collections": {k: len(v) for k, v in data.items()}},
+            )
+            return path, client.scan_activity_log()
 
-        def done(saved_path):
+        def done(result):
+            saved_path, rows = result
+            self.activity_items = rows
+            self.populate_activity_log()
             self.log(f"Exported catalogue to {saved_path}")
 
         self.run_background("Export all tables", task, done)
@@ -832,14 +1390,23 @@ class SportsAdminApp:
                     client.put_item(collection, item)
                     count += 1
                 counts[collection] = count
+            client.write_activity(
+                "catalogue_imported",
+                "Catalogue JSON imported/upserted",
+                actor_arn=self.actor_arn,
+                details={"import_path": str(path), "counts": counts},
+            )
             refreshed = {collection: client.scan_all(collection) for collection in COLLECTIONS}
-            return counts, refreshed
+            activity_rows = client.scan_activity_log()
+            return counts, refreshed, activity_rows
 
         def done(result):
-            counts, refreshed = result
+            counts, refreshed, activity_rows = result
             self.items = refreshed
+            self.activity_items = activity_rows
             self.populate_suggestions()
             self.populate_records()
+            self.populate_activity_log()
             self.log("Imported records: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
 
         self.run_background("Import JSON", task, done)
