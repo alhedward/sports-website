@@ -18,6 +18,7 @@ Optional:
 from __future__ import annotations
 
 import base64
+import configparser
 import getpass
 import hashlib
 import http.server
@@ -79,6 +80,7 @@ def load_local_config() -> dict:
 
 
 LOCAL_CONFIG = load_local_config()
+DEFAULT_PROFILE = os.environ.get("AWS_PROFILE", LOCAL_CONFIG.get("aws_profile", DEFAULT_PROFILE))
 DEFAULT_ADMIN_API_URL = os.environ.get("SPORTS_ADMIN_API_URL", LOCAL_CONFIG.get("admin_api_url", DEFAULT_ADMIN_API_URL))
 DEFAULT_COGNITO_DOMAIN = os.environ.get("SPORTS_ADMIN_COGNITO_DOMAIN", LOCAL_CONFIG.get("cognito_domain", DEFAULT_COGNITO_DOMAIN))
 DEFAULT_COGNITO_CLIENT_ID = os.environ.get("SPORTS_ADMIN_COGNITO_CLIENT_ID", LOCAL_CONFIG.get("cognito_client_id", DEFAULT_COGNITO_CLIENT_ID))
@@ -90,7 +92,7 @@ ACTIVITY_LOG_DISPLAY_LIMIT = 500
 
 APP_AUTHOR = "Tony Edward / VK2ALE"
 APP_SUPPORT = "OpenAI ChatGPT coding support"
-APP_VERSION_FALLBACK = "0.7.7-admin-menu-cognito-users"
+APP_VERSION_FALLBACK = "0.7.9-aws-profile-picker"
 
 
 def read_app_version() -> str:
@@ -109,6 +111,54 @@ def read_app_version() -> str:
         except Exception:
             pass
     return APP_VERSION_FALLBACK
+
+
+def discover_local_aws_profiles() -> list[str]:
+    """Return AWS profile names from boto3 and ~/.aws config files.
+
+    A blank profile in the UI means "use boto3's default credential chain".
+    The named ``default`` profile is still listed when it exists, because some
+    owners like selecting it explicitly.
+    """
+    profiles: set[str] = set()
+
+    if boto3 is not None:
+        try:
+            profiles.update(str(p) for p in boto3.Session().available_profiles if str(p).strip())
+        except Exception:
+            pass
+
+    parser = configparser.RawConfigParser()
+    for path in (Path.home() / ".aws" / "credentials", Path.home() / ".aws" / "config"):
+        try:
+            if path.exists():
+                parser.read(path)
+        except Exception:
+            pass
+
+    for section in parser.sections():
+        name = section.strip()
+        if name == "default":
+            profiles.add("default")
+        elif name.startswith("profile "):
+            profiles.add(name[len("profile "):].strip())
+        elif name:
+            profiles.add(name)
+
+    return sorted(profiles, key=lambda p: (p != "default", p.lower()))
+
+
+def aws_profile_combo_values(selected: str = "") -> list[str]:
+    """Combobox values for AWS profiles, with a blank/default-chain option."""
+    profiles = discover_local_aws_profiles()
+    values = [""]
+    for profile in profiles:
+        if profile and profile not in values:
+            values.append(profile)
+    selected = selected.strip()
+    if selected and selected not in values:
+        values.append(selected)
+    return values
 
 
 def center_window(window, width: int | None = None, height: int | None = None, parent=None) -> None:
@@ -669,6 +719,7 @@ class SportsAdminApp:
         self.actor_arn = ""
 
         self.profile_var = StringVar(value=DEFAULT_PROFILE)
+        self.aws_profile_values = aws_profile_combo_values(DEFAULT_PROFILE)
         self.region_var = StringVar(value=DEFAULT_REGION)
         self.project_var = StringVar(value=DEFAULT_PROJECT)
         self.env_var = StringVar(value=DEFAULT_ENV)
@@ -704,16 +755,25 @@ class SportsAdminApp:
 
         admin_menu = Menu(menu_bar, tearoff=0)
         admin_menu.add_command(label="API / Cognito settings...", command=self.open_connection_settings_modal)
+        admin_menu.add_command(label="Refresh AWS profile list", command=self.refresh_aws_profile_list)
         admin_menu.add_command(label="Add Cognito user...", command=self.open_add_cognito_user_modal)
         menu_bar.add_cascade(label="Admin", menu=admin_menu)
         self.admin_menu = admin_menu
-        self.add_user_menu_index = 1
+        self.add_user_menu_index = 2
 
         help_menu = Menu(menu_bar, tearoff=0)
         help_menu.add_command(label="About", command=self.open_about_modal)
         menu_bar.add_cascade(label="Help", menu=help_menu)
 
         self.root.config(menu=menu_bar)
+
+    def refresh_aws_profile_list(self) -> None:
+        """Refresh the AWS profile dropdown from ~/.aws files."""
+        self.aws_profile_values = aws_profile_combo_values(self.profile_var.get())
+        if hasattr(self, "profile_combo"):
+            self.profile_combo.configure(values=self.aws_profile_values)
+        display = ", ".join(p or "(blank/default chain)" for p in self.aws_profile_values)
+        self.log(f"AWS profile list refreshed: {display}")
 
     def connection_summary_text(self) -> str:
         api_state = "set" if self.api_url_var.get().strip() else "missing"
@@ -934,7 +994,15 @@ class SportsAdminApp:
             state="readonly",
         ).grid(row=0, column=1, padx=(4, 12), sticky="w")
         ttk.Label(top, text="AWS profile").grid(row=0, column=2, sticky="w")
-        ttk.Entry(top, textvariable=self.profile_var, width=14).grid(row=0, column=3, padx=(4, 12), sticky="w")
+        self.profile_combo = ttk.Combobox(
+            top,
+            textvariable=self.profile_var,
+            values=self.aws_profile_values,
+            width=18,
+            state="normal",
+        )
+        self.profile_combo.grid(row=0, column=3, padx=(4, 12), sticky="w")
+        self.profile_combo.bind("<<ComboboxSelected>>", lambda _e: self.schedule_local_config_save())
         ttk.Label(top, text="Region").grid(row=0, column=4, sticky="w")
         ttk.Entry(top, textvariable=self.region_var, width=16).grid(row=0, column=5, padx=(4, 12), sticky="w")
         ttk.Label(top, text="Project").grid(row=0, column=6, sticky="w")
@@ -1126,7 +1194,14 @@ class SportsAdminApp:
 
     def install_local_config_autosave(self) -> None:
         """Automatically persist Cognito/API connection fields as the user edits them."""
-        for var in (self.api_url_var, self.cognito_domain_var, self.cognito_client_id_var, self.callback_port_var, self.cognito_user_pool_id_var):
+        for var in (
+            self.profile_var,
+            self.api_url_var,
+            self.cognito_domain_var,
+            self.cognito_client_id_var,
+            self.callback_port_var,
+            self.cognito_user_pool_id_var,
+        ):
             var.trace_add("write", lambda *_args: (self.refresh_connection_summary(), self.schedule_local_config_save()))
 
     def schedule_local_config_save(self) -> None:
@@ -1143,6 +1218,7 @@ class SportsAdminApp:
         self._local_config_save_job = None
         data = load_local_config()
         data.update({
+            "aws_profile": self.profile_var.get().strip(),
             "admin_api_url": self.api_url_var.get().strip(),
             "cognito_domain": self.cognito_domain_var.get().strip(),
             "cognito_client_id": self.cognito_client_id_var.get().strip(),

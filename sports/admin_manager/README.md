@@ -134,3 +134,23 @@ MFA is intentionally off for this development build. The Cognito pool and local 
 The admin manager now has a menu bar. API/Cognito settings live under `Admin -> API / Cognito settings...` and are saved automatically in `~/.sports-vk2ale-admin-manager.json`.
 
 `Admin -> Add Cognito user...` is an owner/bootstrap control and is only enabled in `boto3_direct` mode. It uses local AWS credentials to create a Cognito user and place them in `PrimaryAdmins`, `Admins`, or `Editors`.
+
+## Build standalone desktop bundles
+
+Build scripts are in `packaging/`:
+
+```bash
+# Linux/macOS
+./packaging/build_current_platform.sh
+
+# Windows PowerShell
+.\packaging\build_windows.ps1
+```
+
+Each platform must be built on that platform. The generated bundles include Python and the required Python packages, so end users do not need to install Python or boto3. See `packaging/README_PACKAGING.md`.
+
+
+
+### 0.7.9 admin app update
+
+The admin app now shows AWS profiles in a dropdown. Leaving the AWS profile field blank uses the default boto3 credential chain; selecting a named profile uses that local AWS profile. The selected profile is saved in `~/.sports-vk2ale-admin-manager.json`.

@@ -183,3 +183,8 @@ sudo apt install python3-tk
 ```
 
 MFA is intentionally off in this dev build. TOTP/WebAuthn can be added later without putting login controls on the public PWA.
+
+
+### 0.7.9 admin app update
+
+The admin app now shows AWS profiles in a dropdown. Leaving the AWS profile field blank uses the default boto3 credential chain; selecting a named profile uses that local AWS profile. The selected profile is saved in `~/.sports-vk2ale-admin-manager.json`.
