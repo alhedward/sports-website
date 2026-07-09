@@ -93,7 +93,7 @@ ACTIVITY_LOG_DISPLAY_LIMIT = 500
 
 APP_AUTHOR = "Tony Edward / VK2ALE"
 APP_SUPPORT = "OpenAI ChatGPT coding support"
-APP_VERSION_FALLBACK = "0.7.10-monitor-centering"
+APP_VERSION_FALLBACK = "0.7.11-cognito-status-fix"
 
 
 def read_app_version() -> str:
@@ -1605,7 +1605,7 @@ class SportsAdminApp:
                 self.apply_discovered_connection_fields(discovered_config)
                 for message in discovered_config.get("messages", []):
                     self.log(message)
-            self.log(f"Connected as {self.actor_arn} using prefix {self.client.config.prefix}.")
+            self.log(self.connection_status_message())
             if activity_error:
                 self.log(f"Shared activity log unavailable: {activity_error}")
             self.populate_suggestions()
@@ -1624,6 +1624,31 @@ class SportsAdminApp:
         client = self.require_client()
         client.write_activity(action, summary, details=details, actor_arn=self.actor_arn)
 
+    def connection_status_message(self) -> str:
+        """Return a safe connection status string for both boto3 and Cognito API clients."""
+        if not self.client:
+            return "Not connected."
+        config = getattr(self.client, "config", None)
+        prefix = getattr(config, "prefix", "")
+        if prefix:
+            return f"Connected as {self.actor_arn} using prefix {prefix}."
+        api_url = getattr(self.client, "api_base_url", "") or getattr(config, "api_base_url", "")
+        if api_url:
+            return f"Connected as {self.actor_arn} using Cognito admin API {api_url}."
+        return f"Connected as {self.actor_arn}."
+
+    def activity_log_source_label(self) -> str:
+        """Return a safe activity-log source label for both boto3 and Cognito API clients."""
+        client = self.require_client()
+        config = getattr(client, "config", None)
+        table_name = getattr(config, "activity_log_table_name", "")
+        if table_name:
+            return table_name
+        api_url = getattr(client, "api_base_url", "") or getattr(config, "api_base_url", "")
+        if api_url:
+            return f"Cognito admin API {api_url}/admin/activity-log"
+        return "shared activity log"
+
     def refresh_activity_log(self) -> None:
         def task():
             client = self.require_client()
@@ -1632,7 +1657,7 @@ class SportsAdminApp:
         def done(rows):
             self.activity_items = rows
             self.populate_activity_log()
-            self.log(f"Loaded {len(rows)} shared activity log entries from {self.require_client().config.activity_log_table_name}.")
+            self.log(f"Loaded {len(rows)} shared activity log entries from {self.activity_log_source_label()}.")
 
         self.run_background("Refresh shared activity log", task, done)
 
