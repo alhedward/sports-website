@@ -61,6 +61,27 @@ DEFAULT_ADMIN_API_URL = os.environ.get("SPORTS_ADMIN_API_URL", "")
 DEFAULT_COGNITO_DOMAIN = os.environ.get("SPORTS_ADMIN_COGNITO_DOMAIN", "")
 DEFAULT_COGNITO_CLIENT_ID = os.environ.get("SPORTS_ADMIN_COGNITO_CLIENT_ID", "")
 DEFAULT_CALLBACK_PORT = os.environ.get("SPORTS_ADMIN_CALLBACK_PORT", "8765")
+LOCAL_CONFIG_PATH = Path.home() / ".sports-vk2ale-admin-manager.json"
+
+
+def load_local_config() -> dict:
+    """Load small local UI config from the user's home directory."""
+    try:
+        if LOCAL_CONFIG_PATH.exists():
+            data = json.loads(LOCAL_CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        # Do not prevent the admin app from starting because a local preferences
+        # file is missing, corrupt, or temporarily unreadable.
+        pass
+    return {}
+
+
+LOCAL_CONFIG = load_local_config()
+DEFAULT_ADMIN_API_URL = os.environ.get("SPORTS_ADMIN_API_URL", LOCAL_CONFIG.get("admin_api_url", DEFAULT_ADMIN_API_URL))
+DEFAULT_COGNITO_DOMAIN = os.environ.get("SPORTS_ADMIN_COGNITO_DOMAIN", LOCAL_CONFIG.get("cognito_domain", DEFAULT_COGNITO_DOMAIN))
+DEFAULT_COGNITO_CLIENT_ID = os.environ.get("SPORTS_ADMIN_COGNITO_CLIENT_ID", LOCAL_CONFIG.get("cognito_client_id", DEFAULT_COGNITO_CLIENT_ID))
 APP_VERSION_FILE = Path(__file__).resolve().parents[1] / "VERSION"
 ACTIVITY_LOG_COLLECTION = "activity_log"
 ACTIVITY_LOG_SUFFIX = "activity-log"
@@ -313,6 +334,38 @@ def _decode_jwt_unverified(token: str) -> dict:
         return {}
 
 
+def _claim_groups(claims: dict) -> list[str]:
+    raw = claims.get("cognito:groups") or claims.get("groups") or claims.get("cognito_groups")
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [str(item).strip().strip("'\"") for item in raw if str(item).strip()]
+    value = str(raw).strip()
+    if value.startswith("[") and value.endswith("]"):
+        inner = value[1:-1].strip()
+        try:
+            decoded = json.loads(value)
+            if isinstance(decoded, list):
+                return [str(item).strip().strip("'\"") for item in decoded if str(item).strip()]
+        except Exception:
+            value = inner
+    return [part.strip().strip("'\"") for part in value.split(",") if part.strip().strip("'\"")]
+
+
+def _token_debug_summary(tokens: dict) -> str:
+    parts = []
+    for name in ("id_token", "access_token"):
+        claims = _decode_jwt_unverified(tokens.get(name, ""))
+        if not claims:
+            parts.append(f"{name}=missing")
+            continue
+        groups = _claim_groups(claims)
+        token_use = claims.get("token_use", "?")
+        aud = claims.get("aud") or claims.get("client_id") or "?"
+        parts.append(f"{name}: use={token_use}, aud/client={aud}, groups={groups or 'none'}")
+    return "; ".join(parts)
+
+
 class _OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
     server_version = "SportsAdminOAuthCallback/1.0"
 
@@ -411,11 +464,23 @@ class CognitoPkceAuth:
             raise RuntimeError(f"Token exchange failed: HTTP {exc.code}: {detail}") from exc
 
     def authorization_header(self) -> str:
-        token = self.tokens.get("access_token") or self.tokens.get("id_token")
+        token = self.tokens.get(self.preferred_token_name) or self.tokens.get("id_token") or self.tokens.get("access_token")
         if not token:
             self.login()
-            token = self.tokens.get("access_token") or self.tokens.get("id_token")
+            token = self.tokens.get(self.preferred_token_name) or self.tokens.get("id_token") or self.tokens.get("access_token")
         return f"Bearer {token}"
+
+    def switch_to_alternate_token(self) -> bool:
+        """Switch between ID and access token once when an API rejects auth."""
+        alternate = "access_token" if self.preferred_token_name == "id_token" else "id_token"
+        if self.tokens.get(alternate):
+            self.preferred_token_name = alternate
+            self.claims = _decode_jwt_unverified(self.tokens.get(alternate, ""))
+            return True
+        return False
+
+    def debug_summary(self) -> str:
+        return _token_debug_summary(self.tokens)
 
 
 class ApiAdminClient:
@@ -429,7 +494,7 @@ class ApiAdminClient:
         self.auth.login()
         self.api_base_url = config.api_base_url.strip().rstrip("/")
 
-    def request(self, method: str, path: str, payload: dict | None = None):
+    def request(self, method: str, path: str, payload: dict | None = None, *, _retried_alt_token: bool = False):
         url = self.api_base_url + path
         data = None
         headers = {
@@ -451,7 +516,12 @@ class ApiAdminClient:
                 message = parsed.get("message") or detail
             except Exception:
                 message = detail
-            raise RuntimeError(f"Admin API {method} {path} failed: HTTP {exc.code}: {message}") from exc
+
+            if exc.code in (401, 403) and not _retried_alt_token and self.auth.switch_to_alternate_token():
+                return self.request(method, path, payload, _retried_alt_token=True)
+
+            debug = self.auth.debug_summary()
+            raise RuntimeError(f"Admin API {method} {path} failed: HTTP {exc.code}: {message}. Local token check: {debug}") from exc
 
     def caller_identity(self) -> dict:
         result = self.request("GET", "/admin/me")
@@ -561,8 +631,11 @@ class SportsAdminApp:
         self.record_search_var = StringVar(value="")
         self.include_all_suggestions_var = BooleanVar(value=False)
         self.status_var = StringVar(value="Not connected.")
+        self._local_config_save_job = None
 
         self.build_ui()
+        self.install_local_config_autosave()
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def build_ui(self) -> None:
         top = ttk.Frame(self.root, padding=10)
@@ -775,6 +848,53 @@ class SportsAdminApp:
             self.log_text.see(END)
         self.status_var.set(message)
 
+    def install_local_config_autosave(self) -> None:
+        """Automatically persist Cognito/API connection fields as the user edits them."""
+        for var in (self.api_url_var, self.cognito_domain_var, self.cognito_client_id_var):
+            var.trace_add("write", lambda *_args: self.schedule_local_config_save())
+
+    def schedule_local_config_save(self) -> None:
+        """Debounce local config writes so typing/pasting does not hammer the disk."""
+        if self._local_config_save_job is not None:
+            try:
+                self.root.after_cancel(self._local_config_save_job)
+            except Exception:
+                pass
+        self._local_config_save_job = self.root.after(400, self.save_local_config)
+
+    def save_local_config(self) -> None:
+        """Write the three Cognito/API fields to a JSON file in the user's home directory."""
+        self._local_config_save_job = None
+        data = load_local_config()
+        data.update({
+            "admin_api_url": self.api_url_var.get().strip(),
+            "cognito_domain": self.cognito_domain_var.get().strip(),
+            "cognito_client_id": self.cognito_client_id_var.get().strip(),
+            "updated_at": now_iso(),
+        })
+        try:
+            tmp_path = LOCAL_CONFIG_PATH.with_suffix(LOCAL_CONFIG_PATH.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            tmp_path.replace(LOCAL_CONFIG_PATH)
+            try:
+                os.chmod(LOCAL_CONFIG_PATH, 0o600)
+            except Exception:
+                pass
+        except Exception:
+            # Saving convenience config must never interrupt an approval/edit flow.
+            pass
+
+    def on_close(self) -> None:
+        """Persist local connection details before the app exits."""
+        if self._local_config_save_job is not None:
+            try:
+                self.root.after_cancel(self._local_config_save_job)
+            except Exception:
+                pass
+            self._local_config_save_job = None
+        self.save_local_config()
+        self.root.destroy()
+
     def get_config(self) -> AwsConfig:
         return AwsConfig(
             profile=self.profile_var.get().strip(),
@@ -795,6 +915,149 @@ class SportsAdminApp:
             callback_port=port,
         )
 
+    def discover_connection_fields_via_boto3(self, config: AwsConfig) -> dict:
+        """Discover Cognito/API connection fields using the selected boto3 profile.
+
+        This is a convenience for the owner/emergency boto3_direct mode: after a
+        successful AWS connection, the app can fill the Cognito/API fields that
+        delegated admins use later, without requiring command-line lookups.
+        """
+        if boto3 is None:
+            raise RuntimeError("boto3 is not installed. Run: python3 -m pip install boto3")
+        if config.profile:
+            session = boto3.Session(profile_name=config.profile, region_name=config.region)
+        else:
+            session = boto3.Session(region_name=config.region)
+
+        prefix = config.prefix
+        wanted_api_name = f"{prefix}-http-api"
+        wanted_pool_name = f"{prefix}-admin-users"
+        wanted_client_name = f"{prefix}-admin-local-app"
+
+        discovered = {
+            "admin_api_url": "",
+            "cognito_domain": "",
+            "cognito_client_id": "",
+            "cognito_user_pool_id": "",
+            "messages": [],
+        }
+
+        # API Gateway HTTP API endpoint.
+        try:
+            apigw = session.client("apigatewayv2")
+            apis = []
+            try:
+                paginator = apigw.get_paginator("get_apis")
+                for page in paginator.paginate():
+                    apis.extend(page.get("Items", []))
+            except Exception:
+                response = apigw.get_apis()
+                apis.extend(response.get("Items", []))
+            match = next((api for api in apis if api.get("Name") == wanted_api_name), None)
+            if not match:
+                candidates = [
+                    api for api in apis
+                    if str(api.get("Name", "")).startswith(prefix) and api.get("ApiEndpoint")
+                ]
+                match = next((api for api in candidates if "http" in str(api.get("Name", "")).lower()), None)
+                if not match and len(candidates) == 1:
+                    match = candidates[0]
+            if match and match.get("ApiEndpoint"):
+                discovered["admin_api_url"] = str(match["ApiEndpoint"]).rstrip("/")
+                discovered["messages"].append(f"Admin API discovered: {match.get('Name', wanted_api_name)}")
+            else:
+                discovered["messages"].append(f"Admin API not found: {wanted_api_name}")
+        except Exception as exc:
+            discovered["messages"].append(f"Admin API discovery failed: {exc}")
+
+        # Cognito user pool, hosted UI domain and local-app client ID.
+        try:
+            cognito = session.client("cognito-idp")
+            pools = []
+            kwargs = {"MaxResults": 60}
+            while True:
+                response = cognito.list_user_pools(**kwargs)
+                pools.extend(response.get("UserPools", []))
+                token = response.get("NextToken")
+                if not token:
+                    break
+                kwargs["NextToken"] = token
+
+            pool = next((item for item in pools if item.get("Name") == wanted_pool_name), None)
+            if not pool:
+                pool_candidates = [
+                    item for item in pools
+                    if str(item.get("Name", "")).startswith(prefix)
+                    and "admin" in str(item.get("Name", "")).lower()
+                ]
+                if len(pool_candidates) == 1:
+                    pool = pool_candidates[0]
+            if not pool:
+                discovered["messages"].append(f"Cognito user pool not found: {wanted_pool_name}")
+                return discovered
+
+            user_pool_id = pool.get("Id", "")
+            discovered["cognito_user_pool_id"] = user_pool_id
+            discovered["messages"].append(f"Cognito user pool discovered: {wanted_pool_name}")
+
+            description = cognito.describe_user_pool(UserPoolId=user_pool_id).get("UserPool", {})
+            custom_domain = description.get("CustomDomain")
+            domain_prefix = description.get("Domain")
+            if custom_domain:
+                discovered["cognito_domain"] = f"https://{custom_domain}"
+            elif domain_prefix:
+                discovered["cognito_domain"] = f"https://{domain_prefix}.auth.{config.region}.amazoncognito.com"
+            else:
+                discovered["messages"].append("Cognito hosted-login domain not configured on the user pool.")
+
+            clients = []
+            kwargs = {"UserPoolId": user_pool_id, "MaxResults": 60}
+            while True:
+                response = cognito.list_user_pool_clients(**kwargs)
+                clients.extend(response.get("UserPoolClients", []))
+                token = response.get("NextToken")
+                if not token:
+                    break
+                kwargs["NextToken"] = token
+
+            app_client = next((item for item in clients if item.get("ClientName") == wanted_client_name), None)
+            if not app_client:
+                client_candidates = [
+                    item for item in clients
+                    if "admin" in str(item.get("ClientName", "")).lower()
+                ]
+                if len(client_candidates) == 1:
+                    app_client = client_candidates[0]
+                elif len(clients) == 1:
+                    app_client = clients[0]
+            if app_client and app_client.get("ClientId"):
+                discovered["cognito_client_id"] = str(app_client["ClientId"])
+                discovered["messages"].append(f"Cognito app client discovered: {app_client.get('ClientName', wanted_client_name)}")
+            else:
+                discovered["messages"].append(f"Cognito app client not found: {wanted_client_name}")
+        except Exception as exc:
+            discovered["messages"].append(f"Cognito discovery failed: {exc}")
+
+        return discovered
+
+    def apply_discovered_connection_fields(self, discovered: dict) -> None:
+        """Populate the three Cognito/API fields and persist them locally."""
+        changed = False
+        value = str(discovered.get("admin_api_url") or "").strip()
+        if value and value != self.api_url_var.get().strip():
+            self.api_url_var.set(value)
+            changed = True
+        value = str(discovered.get("cognito_domain") or "").strip()
+        if value and value != self.cognito_domain_var.get().strip():
+            self.cognito_domain_var.set(value)
+            changed = True
+        value = str(discovered.get("cognito_client_id") or "").strip()
+        if value and value != self.cognito_client_id_var.get().strip():
+            self.cognito_client_id_var.set(value)
+            changed = True
+        if changed:
+            self.save_local_config()
+
     def run_background(self, label: str, func, on_done=None) -> None:
         self.status_var.set(f"Running: {label}…")
         def worker():
@@ -802,7 +1065,7 @@ class SportsAdminApp:
                 result = func()
             except Exception as exc:
                 tb = traceback.format_exc()
-                self.root.after(0, lambda: self.handle_error(label, exc, tb))
+                self.root.after(0, lambda label=label, exc=exc, tb=tb: self.handle_error(label, exc, tb))
                 return
             if on_done:
                 self.root.after(0, lambda: on_done(result))
@@ -818,15 +1081,27 @@ class SportsAdminApp:
         messagebox.showerror(APP_TITLE, f"{label} failed:\n\n{exc}")
 
     def connect_and_refresh(self) -> None:
+        self.save_local_config()
+
         def task():
             mode = self.auth_mode_var.get().strip() or "cognito_api"
+            discovered_config = {}
             if mode == "boto3_direct":
                 config = self.get_config()
                 client = DynamoAdminClient(config)
+                discovered_config = self.discover_connection_fields_via_boto3(config)
+                # Populate the visible Cognito/API fields as soon as discovery succeeds.
+                # This still happens even if a later DynamoDB scan/activity-log call fails.
+                if any(discovered_config.get(key) for key in ("admin_api_url", "cognito_domain", "cognito_client_id")):
+                    self.root.after(0, lambda cfg=deepcopy(discovered_config): self.apply_discovered_connection_fields(cfg))
                 connection_details = {
                     "mode": mode,
                     "table_prefix": config.prefix,
                     "activity_log_table": config.activity_log_table_name,
+                    "discovered_admin_api_url": discovered_config.get("admin_api_url", ""),
+                    "discovered_cognito_domain": discovered_config.get("cognito_domain", ""),
+                    "discovered_cognito_client_id": discovered_config.get("cognito_client_id", ""),
+                    "discovered_cognito_user_pool_id": discovered_config.get("cognito_user_pool_id", ""),
                 }
             else:
                 client = ApiAdminClient(self.get_api_config())
@@ -850,11 +1125,15 @@ class SportsAdminApp:
                 activity_items = client.scan_activity_log()
             except Exception as exc:
                 activity_error = str(exc)
-            return client, identity, items, activity_items, activity_error
+            return client, identity, items, activity_items, activity_error, discovered_config
 
         def done(result):
-            self.client, identity, self.items, self.activity_items, activity_error = result
+            self.client, identity, self.items, self.activity_items, activity_error, discovered_config = result
             self.actor_arn = identity.get("Arn", "")
+            if discovered_config:
+                self.apply_discovered_connection_fields(discovered_config)
+                for message in discovered_config.get("messages", []):
+                    self.log(message)
             self.log(f"Connected as {self.actor_arn} using prefix {self.client.config.prefix}.")
             if activity_error:
                 self.log(f"Shared activity log unavailable: {activity_error}")

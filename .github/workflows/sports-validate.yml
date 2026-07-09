@@ -7,6 +7,7 @@ on:
       - master
     paths:
       - "sports/terraform/**"
+      - "sports/terraform-bootstrap/**"
       - "sports/site/**"
       - "sports/lambda/**"
       - "sports/data/**"
@@ -18,6 +19,7 @@ on:
   pull_request:
     paths:
       - "sports/terraform/**"
+      - "sports/terraform-bootstrap/**"
       - "sports/site/**"
       - "sports/lambda/**"
       - "sports/data/**"
@@ -27,6 +29,15 @@ on:
       - "sports/README.md"
       - ".github/workflows/sports-validate.yml"
   workflow_dispatch:
+    inputs:
+      seed_database:
+        description: "Run seed/ingest Lambda after deploy. Use only for first bootstrap or deliberate curated-data reset."
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 concurrency:
   group: sports-site-${{ github.ref }}
@@ -63,16 +74,19 @@ jobs:
           node --check sports/site/sw.js
 
       - name: Terraform fmt
-        working-directory: sports/terraform
-        run: terraform fmt -check -recursive
+        run: |
+          terraform -chdir=sports/terraform fmt -check -recursive
+          terraform -chdir=sports/terraform-bootstrap fmt -check -recursive
 
       - name: Terraform init without backend
-        working-directory: sports/terraform
-        run: terraform init -backend=false
+        run: |
+          terraform -chdir=sports/terraform init -backend=false
+          terraform -chdir=sports/terraform-bootstrap init -backend=false
 
       - name: Terraform validate
-        working-directory: sports/terraform
-        run: terraform validate
+        run: |
+          terraform -chdir=sports/terraform validate
+          terraform -chdir=sports/terraform-bootstrap validate
 
   deploy:
     name: Deploy to AWS
@@ -173,10 +187,13 @@ jobs:
         working-directory: sports/terraform
         run: terraform apply -auto-approve tfplan
 
-      - name: Seed DynamoDB content
+      - name: Optional seed DynamoDB content
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_database == 'true' }}
         working-directory: sports/terraform
         run: |
           set -euo pipefail
+          echo "WARNING: Manual seed requested. This upserts curated seed records by id."
+          echo "Do not use this for normal redeploys of an existing site."
           INGEST_FUNCTION="$(terraform output -raw ingest_lambda_name)"
           aws lambda invoke \
             --function-name "${INGEST_FUNCTION}" \

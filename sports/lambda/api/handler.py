@@ -262,26 +262,56 @@ def handle_search(query: Dict[str, str]) -> Dict[str, Any]:
 # ----------------------------- Admin API -----------------------------
 
 def parse_groups(raw_groups: Any) -> List[str]:
+    """Parse Cognito group claims from API Gateway's JWT event.
+
+    API Gateway normally forwards Cognito groups as a list-like claim, but across
+    token types/provider serialisation it can arrive as a Python list, a JSON
+    list string, a comma-separated string, or the slightly annoying
+    "[PrimaryAdmins]" string. Keep this deliberately forgiving so a valid
+    admin does not get blocked because of claim formatting.
+    """
     if not raw_groups:
         return []
-    if isinstance(raw_groups, list):
-        return [str(group) for group in raw_groups]
+    if isinstance(raw_groups, (list, tuple, set)):
+        return [str(group).strip().strip("'\"") for group in raw_groups if str(group).strip()]
     value = str(raw_groups).strip()
     if value.startswith("[") and value.endswith("]"):
         try:
             decoded = json.loads(value)
             if isinstance(decoded, list):
-                return [str(group) for group in decoded]
+                return [str(group).strip().strip("'\"") for group in decoded if str(group).strip()]
         except json.JSONDecodeError:
-            pass
-    return [part.strip() for part in value.split(",") if part.strip()]
+            value = value[1:-1].strip()
+    return [part.strip().strip("'\"") for part in value.split(",") if part.strip().strip("'\"")]
+
+
+def groups_from_claims(claims: Dict[str, Any]) -> List[str]:
+    seen: List[str] = []
+    for key in ("cognito:groups", "groups", "cognito_groups"):
+        for group in parse_groups(claims.get(key)):
+            if group and group not in seen:
+                seen.append(group)
+    return seen
 
 
 def admin_claims_or_raise(event: Dict[str, Any]) -> Dict[str, Any]:
     claims = (((event.get("requestContext") or {}).get("authorizer") or {}).get("jwt") or {}).get("claims") or {}
-    groups = parse_groups(claims.get("cognito:groups"))
+    groups = groups_from_claims(claims)
     if ADMIN_ALLOWED_GROUPS and not ADMIN_ALLOWED_GROUPS.intersection(groups):
-        raise PermissionError("Authenticated user is not in an allowed admin group")
+        print(
+            "Admin authorisation denied",
+            json.dumps({
+                "expected_groups": sorted(ADMIN_ALLOWED_GROUPS),
+                "parsed_groups": groups,
+                "claim_keys": sorted(claims.keys()),
+                "raw_group_claim": claims.get("cognito:groups"),
+                "token_use": claims.get("token_use"),
+                "client": claims.get("aud") or claims.get("client_id"),
+                "username": claims.get("username") or claims.get("cognito:username"),
+                "email": claims.get("email"),
+            }, default=str),
+        )
+        raise PermissionError(f"Authenticated user is not in an allowed admin group; parsed_groups={groups}; expected={sorted(ADMIN_ALLOWED_GROUPS)}")
     claims = dict(claims)
     claims["_groups"] = groups
     return claims

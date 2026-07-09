@@ -36,13 +36,19 @@ terraform init
 terraform apply
 ```
 
-Seed DynamoDB:
+Seed DynamoDB only for first bootstrap or a deliberate curated-data reset:
 
 ```bash
-aws lambda invoke   --function-name "$(terraform output -raw ingest_lambda_name)"   --cli-binary-format raw-in-base64-out   --payload '{}'   /tmp/sports-seed-response.json
+aws lambda invoke \
+  --function-name "$(terraform output -raw ingest_lambda_name)" \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{}' \
+  /tmp/sports-seed-response.json
 
 cat /tmp/sports-seed-response.json
 ```
+
+Normal redeploys must not run seed/ingest, because the live DynamoDB tables can contain community-approved edits that should not be overwritten by packaged starter data.
 
 Open the site:
 
@@ -106,17 +112,31 @@ To allow Actions to deploy to AWS, configure:
 
 Optional variables such as `AWS_REGION`, `CUSTOM_DOMAIN_NAME`, `ROUTE53_ZONE_NAME`, and `CREATE_ROUTE53_RECORDS` are documented in `docs/GITHUB_ACTIONS_DEPLOY.md`.
 
-The deploy job validates, applies Terraform, seeds DynamoDB through the ingest Lambda, and invalidates CloudFront.
+The deploy job validates, applies Terraform, and invalidates CloudFront. It does **not** seed DynamoDB during normal redeploys. Seed/ingest is available only as an explicit manual workflow-dispatch option for first bootstrap or deliberate reset.
 
 ## Community-assisted growth
 
 The frontend includes a `Suggest an official sporting body or pathway` form. Submissions go to the `suggestions` table as `pending_review`; they are not added to the public directory until reviewed. The recommended OpenAI-assisted research workflow is documented in `docs/COMMUNITY_DISCOVERY_PIPELINE.md`.
 
-Current version: 0.7.0-cognito-admin-api
+Current version: 0.7.3-tk-error-capture
 
 ## UX polish
 
 The public PWA includes a section drawer and floating back-to-top control for quicker navigation on long mobile pages.
+
+## AWS bootstrap for a fresh account
+
+Before GitHub Actions can deploy the stack in a new AWS account, run the bootstrap Terraform layer once with owner/admin AWS credentials:
+
+```bash
+cd sports/terraform-bootstrap
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform apply
+```
+
+That creates the Terraform state bucket, GitHub OIDC provider, and `sports-github-actions-deploy` role, including Cognito deployment permissions. Use its outputs to set the GitHub Actions secret `AWS_ROLE_ARN` and variables such as `TF_STATE_BUCKET`, `TF_STATE_KEY`, `AWS_REGION`, `TF_PROJECT_NAME`, and `TF_ENVIRONMENT`. See `sports/terraform-bootstrap/README.md` for prod-account notes.
+
 ## Local admin manager
 
 This package includes a Tkinter admin manager at:

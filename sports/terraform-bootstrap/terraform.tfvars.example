@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars and adjust before running the bootstrap layer.
+
+aws_region  = "ap-southeast-2"
+project_name = "sports-aggregator"
+environment  = "dev"
+
+# For prod, use a separate state key, for example:
+# environment = "prod"
+# state_key   = "sports/prod/terraform.tfstate"
+state_key = "sports/dev/terraform.tfstate"
+
+# The default bucket name becomes:
+# sports-vk2ale-terraform-state-ACCOUNT_ID
+# Override only if you need a different global bucket name.
+state_bucket_prefix = "sports-vk2ale-terraform-state"
+# state_bucket_name = "sports-vk2ale-terraform-state-123456789012"
+
+github_owner = "alhedward"
+github_repo  = "sports-website"
+github_branches = ["main", "master"]
+
+deploy_role_name = "sports-github-actions-deploy"
+
+# For easy bootstrap, Route 53 is broad because hosted-zone ARNs are account-specific.
+# For a tighter prod account later, set allow_broad_route53=false and provide hosted-zone ARNs.
+allow_broad_route53 = true
+# route53_hosted_zone_arns = ["arn:aws:route53:::hostedzone/Z123EXAMPLE"]
