@@ -73,6 +73,18 @@ resource "aws_apigatewayv2_authorizer" "admin_jwt" {
   }
 }
 
+
+# Unauthenticated CORS preflight for protected admin routes.
+# Browsers send OPTIONS without Authorization before admin API calls that
+# include the Authorization header. If OPTIONS is captured by the JWT-protected
+# ANY /admin/{proxy+} route, API Gateway returns a non-2xx response and the
+# browser blocks the real request.
+resource "aws_apigatewayv2_route" "admin_options_proxy" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "OPTIONS /admin/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
 resource "aws_apigatewayv2_route" "admin_proxy" {
   api_id             = aws_apigatewayv2_api.http.id
   route_key          = "ANY /admin/{proxy+}"

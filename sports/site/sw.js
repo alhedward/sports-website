@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.18-admin-route-fix';
+const APP_VERSION = '0.7.19-admin-cors-preflight-fix';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 
@@ -90,8 +90,16 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cross-origin GET requests are normally API reads. Keep them network-first,
-  // with a cached fallback for basic browsing when the network drops out.
+  // Never cache authenticated admin API calls or any request that carries an
+  // Authorization header. These responses are user-specific and should not be
+  // replayed from the service worker cache after logout or account changes.
+  if (url.pathname.startsWith('/admin') || request.headers.has('Authorization')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Cross-origin public API reads can be kept network-first, with a cached
+  // fallback for basic browsing when the network drops out.
   event.respondWith(networkFirst(request));
 });
 
