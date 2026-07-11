@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.17-admin-suggestion-route-fix';
+const APP_VERSION = '0.7.18-admin-route-fix';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 
@@ -70,12 +70,14 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
 
   if (request.mode === 'navigate') {
-    const fallbackPage = url.pathname.startsWith('/admin') ? '/admin/index.html' : '/offline.html';
+    const isAdminPath = url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+    const cacheKey = isAdminPath ? '/admin/index.html' : '/index.html';
+    const fallbackPage = isAdminPath ? '/admin/index.html' : '/offline.html';
     event.respondWith(
       fetch(request)
         .then(response => {
           const copy = response.clone();
-          caches.open(STATIC_CACHE).then(cache => cache.put('/index.html', copy)).catch(() => {});
+          caches.open(STATIC_CACHE).then(cache => cache.put(cacheKey, copy)).catch(() => {});
           return response;
         })
         .catch(() => caches.match(fallbackPage))

@@ -41,6 +41,35 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+
+resource "aws_cloudfront_function" "site_router" {
+  name    = "${local.name_prefix}-site-router"
+  runtime = "cloudfront-js-2.0"
+  comment = "Routes /admin and admin deep links to the admin PWA shell"
+  publish = true
+  code    = <<EOT
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri || "/";
+
+  if (uri === "/admin" || uri === "/admin/") {
+    request.uri = "/admin/index.html";
+    return request;
+  }
+
+  if (uri.indexOf("/admin/") === 0) {
+    var fileName = uri.substring(uri.lastIndexOf("/") + 1);
+    if (fileName.indexOf(".") === -1) {
+      request.uri = "/admin/index.html";
+    }
+    return request;
+  }
+
+  return request;
+}
+EOT
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -72,6 +101,11 @@ resource "aws_cloudfront_distribution" "site" {
     default_ttl            = 3600
     max_ttl                = 86400
     compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.site_router.arn
+    }
   }
 
   custom_error_response {
