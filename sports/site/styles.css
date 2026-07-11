@@ -104,7 +104,7 @@ body.drawer-open .drawer-toggle {
   backdrop-filter: blur(2px);
 }
 .drawer-overlay[hidden] {
-  display: none;
+  display: none !important;
 }
 .section-drawer {
   position: fixed;
@@ -481,6 +481,12 @@ body.standalone-mode .drawer-overlay:not([hidden]) {
   color: inherit;
   cursor: pointer;
 }
+
+.settings-modal[hidden],
+.detail[hidden] {
+  display: none !important;
+}
+
 .settings-modal {
   position: fixed;
   inset: 0;

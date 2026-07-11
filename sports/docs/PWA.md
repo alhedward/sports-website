@@ -25,3 +25,7 @@ The PWA work applies to the public site only. Cognito/admin tools should stay in
 - Add push notifications for major event reminders or approved-followed sports.
 - Add background sync for suggestions after a proper review queue/outbox is implemented.
 - Add richer offline browsing for recently viewed sport bodies and top-player profiles.
+## 0.7.15 notification modal fix
+
+The public settings/notifications modal is now hidden with an explicit CSS rule so it cannot appear automatically on page load. Notification prompts remain user-initiated from Settings only.
+

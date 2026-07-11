@@ -81,3 +81,7 @@ The admin pre-login check uses server-side controls:
 ## 0.7.14 note
 
 The public PWA settings modal was hardened so the side-drawer cog opens reliably, the close button works, Escape closes the modal, and notification enablement does not request browser notification permission until VAPID push keys are configured. The admin PWA also avoids requesting notification permission until push delivery is configured.
+## 0.7.15 notification modal fix
+
+The public settings/notifications modal is now hidden with an explicit CSS rule so it cannot appear automatically on page load. Notification prompts remain user-initiated from Settings only.
+
