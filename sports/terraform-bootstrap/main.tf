@@ -110,7 +110,8 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     sid    = "ReadCallerIdentity"
     effect = "Allow"
     actions = [
-      "sts:GetCallerIdentity"
+      "sts:GetCallerIdentity",
+      "s3:ListAllMyBuckets"
     ]
     resources = ["*"]
   }
@@ -128,8 +129,11 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "s3:GetEncryptionConfiguration",
       "s3:PutBucketPublicAccessBlock",
       "s3:GetBucketPublicAccessBlock",
+      "s3:DeleteBucketPublicAccessBlock",
       "s3:PutBucketTagging",
-      "s3:GetBucketTagging"
+      "s3:GetBucketTagging",
+      "s3:DeleteBucketTagging",
+      "s3:DeleteBucketEncryption"
     ]
     resources = [aws_s3_bucket.terraform_state.arn]
   }
@@ -161,12 +165,15 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "s3:DeleteBucketPolicy",
       "s3:GetBucketPublicAccessBlock",
       "s3:PutBucketPublicAccessBlock",
+      "s3:DeleteBucketPublicAccessBlock",
       "s3:GetBucketVersioning",
       "s3:PutBucketVersioning",
       "s3:GetEncryptionConfiguration",
       "s3:PutEncryptionConfiguration",
+      "s3:DeleteBucketEncryption",
       "s3:GetBucketTagging",
       "s3:PutBucketTagging",
+      "s3:DeleteBucketTagging",
       "s3:PutBucketWebsite",
       "s3:GetBucketWebsite",
       "s3:DeleteBucketWebsite"
@@ -225,6 +232,7 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "lambda:GetFunction",
       "lambda:GetFunctionCodeSigningConfig",
       "lambda:GetPolicy",
+      "lambda:ListTags",
       "lambda:AddPermission",
       "lambda:RemovePermission",
       "lambda:UpdateFunctionCode",
@@ -279,6 +287,19 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "arn:aws:iam::${local.account_id}:role/${local.name_prefix}-*"
     ]
   }
+
+  statement {
+    sid    = "ReadAwsManagedLambdaPolicies"
+    effect = "Allow"
+    actions = [
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion"
+    ]
+    resources = [
+      "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+    ]
+  }
+
 
   statement {
     sid    = "ManageHttpApiGateway"

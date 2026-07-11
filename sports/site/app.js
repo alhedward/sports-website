@@ -510,3 +510,77 @@ updateOfflineNotice();
 window.addEventListener('online', updateOfflineNotice);
 window.addEventListener('offline', updateOfflineNotice);
 registerServiceWorker();
+
+// ----------------------------- Public PWA settings / notifications -----------------------------
+const publicNotification = {
+  settingsButton: document.querySelector('#settingsButton'),
+  panel: document.querySelector('#settingsPanel'),
+  close: document.querySelector('#closeSettings'),
+  enable: document.querySelector('#enablePublicNotifications'),
+  disable: document.querySelector('#disablePublicNotifications'),
+  status: document.querySelector('#publicNotificationStatus'),
+};
+
+function setPublicNotificationStatus(message) {
+  if (publicNotification.status) publicNotification.status.textContent = message || '';
+}
+
+async function publicNotificationSubscription() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+async function enablePublicNotifications() {
+  try {
+    if (!('Notification' in window)) {
+      setPublicNotificationStatus('This browser does not support notifications.');
+      return;
+    }
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setPublicNotificationStatus('Notifications were not enabled.');
+      return;
+    }
+    let subscription = await publicNotificationSubscription();
+    if (!subscription && config.vapidPublicKey && 'serviceWorker' in navigator && 'PushManager' in window) {
+      const reg = await navigator.serviceWorker.ready;
+      subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: config.vapidPublicKey });
+    }
+    await fetch(apiUrl('/notifications/subscribe'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: subscription ? subscription.toJSON() : { endpoint: `permission-only:${Date.now()}` }, topics: ['sports-updates'] }),
+    });
+    setPublicNotificationStatus(config.vapidPublicKey ? 'Public notifications enabled for this device.' : 'Notification permission recorded. Server push delivery will activate when VAPID keys are configured.');
+  } catch (err) {
+    setPublicNotificationStatus(`Could not enable notifications: ${err.message}`);
+  }
+}
+
+async function disablePublicNotifications() {
+  try {
+    const subscription = await publicNotificationSubscription();
+    const endpoint = subscription ? subscription.endpoint : localStorage.getItem('sports-public-notification-endpoint') || `permission-only:${Date.now()}`;
+    await fetch(apiUrl('/notifications/unsubscribe'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint }),
+    });
+    if (subscription) await subscription.unsubscribe();
+    setPublicNotificationStatus('Public notifications disabled for this browser/device.');
+  } catch (err) {
+    setPublicNotificationStatus(`Could not disable notifications: ${err.message}`);
+  }
+}
+
+if (publicNotification.settingsButton) {
+  publicNotification.settingsButton.addEventListener('click', () => {
+    publicNotification.panel.hidden = false;
+    closeDrawer?.();
+  });
+  publicNotification.close?.addEventListener('click', () => { publicNotification.panel.hidden = true; });
+  publicNotification.panel?.addEventListener('click', event => { if (event.target === publicNotification.panel) publicNotification.panel.hidden = true; });
+  publicNotification.enable?.addEventListener('click', enablePublicNotifications);
+  publicNotification.disable?.addEventListener('click', disablePublicNotifications);
+}

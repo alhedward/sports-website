@@ -110,3 +110,14 @@ output "admin_api_base_url" {
   description = "API base URL used by the Cognito-backed local admin manager."
   value       = aws_apigatewayv2_api.http.api_endpoint
 }
+
+
+output "public_push_subscriptions_table_name" {
+  description = "DynamoDB table for public PWA notification subscriptions."
+  value       = aws_dynamodb_table.public_push_subscriptions.name
+}
+
+output "admin_devices_table_name" {
+  description = "DynamoDB table for Admin PWA registered devices."
+  value       = aws_dynamodb_table.admin_devices.name
+}

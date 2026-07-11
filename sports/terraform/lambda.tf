@@ -36,6 +36,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         Action = [
           "dynamodb:BatchWriteItem",
           "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
           "dynamodb:GetItem",
           "dynamodb:Scan",
           "dynamodb:Query",
@@ -48,7 +49,10 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           aws_dynamodb_table.sport_bodies.arn,
           aws_dynamodb_table.top_players.arn,
           aws_dynamodb_table.suggestions.arn,
-          aws_dynamodb_table.activity_log.arn
+          aws_dynamodb_table.activity_log.arn,
+          aws_dynamodb_table.public_push_subscriptions.arn,
+          aws_dynamodb_table.admin_devices.arn,
+          aws_dynamodb_table.admin_prelogin_attempts.arn
         ]
       }
     ]
@@ -79,17 +83,20 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      TOURNAMENTS_TABLE    = aws_dynamodb_table.tournaments.name
-      PLAYERS_TABLE        = aws_dynamodb_table.players.name
-      EVENTS_TABLE         = aws_dynamodb_table.events.name
-      SPORT_BODIES_TABLE   = aws_dynamodb_table.sport_bodies.name
-      TOP_PLAYERS_TABLE    = aws_dynamodb_table.top_players.name
-      SUGGESTIONS_TABLE    = aws_dynamodb_table.suggestions.name
-      ACTIVITY_LOG_TABLE   = aws_dynamodb_table.activity_log.name
-      ADMIN_ALLOWED_GROUPS = join(",", var.admin_allowed_groups)
-      ADMIN_USER_POOL_ID   = aws_cognito_user_pool.admin.id
-      ADMIN_APP_CLIENT_ID  = aws_cognito_user_pool_client.admin.id
-      CORS_ALLOW_ORIGIN    = var.cors_allow_origin
+      TOURNAMENTS_TABLE               = aws_dynamodb_table.tournaments.name
+      PLAYERS_TABLE                   = aws_dynamodb_table.players.name
+      EVENTS_TABLE                    = aws_dynamodb_table.events.name
+      SPORT_BODIES_TABLE              = aws_dynamodb_table.sport_bodies.name
+      TOP_PLAYERS_TABLE               = aws_dynamodb_table.top_players.name
+      SUGGESTIONS_TABLE               = aws_dynamodb_table.suggestions.name
+      ACTIVITY_LOG_TABLE              = aws_dynamodb_table.activity_log.name
+      PUBLIC_PUSH_SUBSCRIPTIONS_TABLE = aws_dynamodb_table.public_push_subscriptions.name
+      ADMIN_DEVICES_TABLE             = aws_dynamodb_table.admin_devices.name
+      ADMIN_PRELOGIN_ATTEMPTS_TABLE   = aws_dynamodb_table.admin_prelogin_attempts.name
+      ADMIN_ALLOWED_GROUPS            = join(",", var.admin_allowed_groups)
+      ADMIN_USER_POOL_ID              = aws_cognito_user_pool.admin.id
+      ADMIN_APP_CLIENT_ID             = aws_cognito_user_pool_client.admin.id
+      CORS_ALLOW_ORIGIN               = var.cors_allow_origin
     }
   }
 
@@ -117,4 +124,24 @@ resource "aws_lambda_function" "ingest" {
   }
 
   tags = local.common_tags
+}
+
+
+resource "aws_iam_role_policy" "lambda_cognito_admin_lookup" {
+  name = "${local.name_prefix}-lambda-cognito-admin-lookup"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:ListUsers",
+          "cognito-idp:AdminListGroupsForUser"
+        ]
+        Resource = aws_cognito_user_pool.admin.arn
+      }
+    ]
+  })
 }

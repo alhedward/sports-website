@@ -1,4 +1,4 @@
-const APP_VERSION = '0.5.5-hamburger-only-drawer';
+const APP_VERSION = '0.7.13-admin-pwa';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 
@@ -11,6 +11,11 @@ const APP_SHELL = [
   '/config.js',
   '/manifest.webmanifest',
   '/sponsors.json',
+  '/admin/',
+  '/admin/index.html',
+  '/admin/admin.css',
+  '/admin/admin.js',
+  '/admin/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/maskable-512.png',
@@ -65,6 +70,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
 
   if (request.mode === 'navigate') {
+    const fallbackPage = url.pathname.startsWith('/admin') ? '/admin/index.html' : '/offline.html';
     event.respondWith(
       fetch(request)
         .then(response => {
@@ -72,7 +78,7 @@ self.addEventListener('fetch', event => {
           caches.open(STATIC_CACHE).then(cache => cache.put('/index.html', copy)).catch(() => {});
           return response;
         })
-        .catch(() => caches.match('/offline.html'))
+        .catch(() => caches.match(fallbackPage))
     );
     return;
   }
@@ -85,4 +91,24 @@ self.addEventListener('fetch', event => {
   // Cross-origin GET requests are normally API reads. Keep them network-first,
   // with a cached fallback for basic browsing when the network drops out.
   event.respondWith(networkFirst(request));
+});
+
+
+self.addEventListener('push', event => {
+  let payload = { title: 'Sports.vk2ale', body: 'There is an update.', url: '/' };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch (_err) {}
+  event.waitUntil(self.registration.showNotification(payload.title, {
+    body: payload.body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url: payload.url || '/' }
+  }));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
+  event.waitUntil(clients.openWindow(url));
 });

@@ -118,7 +118,7 @@ The deploy job validates, applies Terraform, and invalidates CloudFront. It does
 
 The frontend includes a `Suggest an official sporting body or pathway` form. Submissions go to the `suggestions` table as `pending_review`; they are not added to the public directory until reviewed. The recommended OpenAI-assisted research workflow is documented in `docs/COMMUNITY_DISCOVERY_PIPELINE.md`.
 
-Current version: 0.7.3-tk-error-capture
+Current version: 0.7.12-terraform-iam-audit
 
 ## UX polish
 
@@ -188,3 +188,8 @@ MFA is intentionally off in this dev build. TOTP/WebAuthn can be added later wit
 ### 0.7.9 admin app update
 
 The admin app now shows AWS profiles in a dropdown. Leaving the AWS profile field blank uses the default boto3 credential chain; selecting a named profile uses that local AWS profile. The selected profile is saved in `~/.sports-vk2ale-admin-manager.json`.
+
+
+## Admin PWA
+
+The browser/PWA admin console is available at `/admin/` after deployment. It uses the Cognito-backed admin API and does not use the local boto3 direct pathway. See `docs/ADMIN_PWA.md`.

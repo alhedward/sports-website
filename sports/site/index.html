@@ -32,6 +32,7 @@
       <a href="#events" data-drawer-link>International events</a>
       <a href="#partner" data-drawer-link>Sponsor options</a>
       <a href="#suggest" data-drawer-link>Suggest a body</a>
+      <button id="settingsButton" class="drawer-settings" type="button" aria-label="Notification settings">⚙ Settings</button>
     </nav>
     <button id="drawerBackToTop" class="drawer-top-button" type="button">Back to top ↑</button>
   </aside>
@@ -153,6 +154,20 @@
         <button type="submit">Submit for review</button>
         <p id="suggestionStatus" class="meta" role="status"></p>
       </form>
+    </section>
+
+    <section class="settings-modal" id="settingsPanel" hidden>
+      <div class="settings-card">
+        <button id="closeSettings" class="ghost" type="button">Close</button>
+        <p class="eyebrow">PWA settings</p>
+        <h2>Notifications</h2>
+        <p>Public notifications are opt-in and do not create admin access. You can disable them at any time.</p>
+        <div class="button-row">
+          <button id="enablePublicNotifications" type="button">Enable public notifications</button>
+          <button id="disablePublicNotifications" type="button">Disable public notifications</button>
+        </div>
+        <p id="publicNotificationStatus" class="meta" role="status"></p>
+      </div>
     </section>
 
     <section class="detail" id="detailPanel" hidden>

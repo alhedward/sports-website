@@ -2,10 +2,11 @@ import json
 import os
 import uuid
 from decimal import Decimal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Iterable, List
 
 import boto3
+from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr
 
 DDB = boto3.resource("dynamodb")
@@ -16,6 +17,10 @@ SPORT_BODIES_TABLE = DDB.Table(os.environ["SPORT_BODIES_TABLE"])
 TOP_PLAYERS_TABLE = DDB.Table(os.environ["TOP_PLAYERS_TABLE"])
 SUGGESTIONS_TABLE = DDB.Table(os.environ["SUGGESTIONS_TABLE"])
 ACTIVITY_LOG_TABLE = DDB.Table(os.environ["ACTIVITY_LOG_TABLE"])
+PUBLIC_PUSH_SUBSCRIPTIONS_TABLE = DDB.Table(os.environ["PUBLIC_PUSH_SUBSCRIPTIONS_TABLE"])
+ADMIN_DEVICES_TABLE = DDB.Table(os.environ["ADMIN_DEVICES_TABLE"])
+ADMIN_PRELOGIN_ATTEMPTS_TABLE = DDB.Table(os.environ["ADMIN_PRELOGIN_ATTEMPTS_TABLE"])
+COGNITO = boto3.client("cognito-idp")
 
 ADMIN_ALLOWED_GROUPS = {
     group.strip()
@@ -83,6 +88,40 @@ def now_iso() -> str:
 
 def today_iso_date() -> str:
     return datetime.now(timezone.utc).date().isoformat()
+
+
+def epoch_seconds(dt: datetime | None = None) -> int:
+    return int((dt or datetime.now(timezone.utc)).timestamp())
+
+def request_ip(event: Dict[str, Any]) -> str:
+    ctx = event.get("requestContext") or {}
+    http = ctx.get("http") or {}
+    headers = event.get("headers") or {}
+    return http.get("sourceIp") or headers.get("x-forwarded-for", "").split(",")[0].strip() or "unknown"
+
+def user_agent(event: Dict[str, Any]) -> str:
+    headers = event.get("headers") or {}
+    return headers.get("user-agent") or headers.get("User-Agent") or "unknown"
+
+def client_context(event: Dict[str, Any]) -> Dict[str, Any]:
+    return {"ip": request_ip(event), "user_agent": user_agent(event)[:500]}
+
+def put_activity_raw(action: str, summary: str, details: Dict[str, Any] | None = None) -> None:
+    created_at = now_iso()
+    item = {
+        "id": f"log-{created_at.replace(':', '').replace('.', '-')}-{uuid.uuid4().hex[:10]}",
+        "created_at": created_at,
+        "action": action,
+        "summary": summary,
+        "actor_sub": "",
+        "actor_username": "",
+        "actor_email": "",
+        "actor_groups": [],
+        "source": "public_or_prelogin_api",
+    }
+    if details:
+        item["details"] = details
+    ACTIVITY_LOG_TABLE.put_item(Item=normalize_decimal(item))
 
 
 def scan_all(table, *, filter_expression=None) -> List[Dict[str, Any]]:
@@ -185,6 +224,108 @@ def handle_top_players(path_parts: List[str], query: Dict[str, str]) -> Dict[str
     return response(200, item)
 
 
+
+def handle_public_notifications(event: Dict[str, Any], method: str, path_parts: List[str]) -> Dict[str, Any]:
+    if method != "POST":
+        return response(405, {"message": "Method not allowed"})
+    payload = parse_json_body(event)
+    action = path_parts[1] if len(path_parts) > 1 else "subscribe"
+    subscription = payload.get("subscription") if isinstance(payload.get("subscription"), dict) else {}
+    endpoint = str(subscription.get("endpoint") or payload.get("endpoint") or "").strip()
+    if not endpoint:
+        return response(400, {"message": "Push subscription endpoint is required"})
+    import hashlib
+    endpoint_hash = hashlib.sha256(endpoint.encode("utf-8")).hexdigest()
+    sub_id = f"public-push-{endpoint_hash[:32]}"
+    now = now_iso()
+    if action in {"unsubscribe", "disable"}:
+        existing = get_item(PUBLIC_PUSH_SUBSCRIPTIONS_TABLE, sub_id) or {"id": sub_id}
+        existing.update({"status": "disabled", "disabled_at": now, "updated_at": now})
+        PUBLIC_PUSH_SUBSCRIPTIONS_TABLE.put_item(Item=normalize_decimal(existing))
+        return response(200, {"ok": True, "id": sub_id, "status": "disabled"})
+    item = {
+        "id": sub_id,
+        "type": "public_notifications",
+        "status": "active",
+        "endpoint_hash": endpoint_hash,
+        "subscription": subscription or {"endpoint": endpoint},
+        "topics": payload.get("topics") if isinstance(payload.get("topics"), list) else ["sports-updates"],
+        "created_at": now,
+        "updated_at": now,
+        "client": client_context(event),
+    }
+    PUBLIC_PUSH_SUBSCRIPTIONS_TABLE.put_item(Item=normalize_decimal(item))
+    return response(201, {"ok": True, "id": sub_id, "status": "active"})
+
+
+def cognito_admin_user_for_email(email: str) -> Dict[str, Any] | None:
+    pool_id = os.environ.get("ADMIN_USER_POOL_ID", "")
+    if not pool_id:
+        return None
+    try:
+        result = COGNITO.list_users(
+            UserPoolId=pool_id,
+            Filter=f'email = "{email}"',
+            Limit=1,
+        )
+    except ClientError as exc:
+        print(f"Cognito list_users failed: {exc}")
+        return None
+    users = result.get("Users", [])
+    if not users:
+        return None
+    user = users[0]
+    username = user.get("Username") or email
+    try:
+        groups = COGNITO.admin_list_groups_for_user(UserPoolId=pool_id, Username=username).get("Groups", [])
+    except ClientError as exc:
+        print(f"Cognito admin_list_groups_for_user failed: {exc}")
+        groups = []
+    group_names = [group.get("GroupName", "") for group in groups]
+    if not ADMIN_ALLOWED_GROUPS.intersection(group_names):
+        return None
+    attrs = {attr.get("Name"): attr.get("Value") for attr in user.get("Attributes", [])}
+    return {"username": username, "sub": attrs.get("sub", ""), "email": attrs.get("email", email), "groups": group_names}
+
+
+def handle_admin_precheck(event: Dict[str, Any], method: str) -> Dict[str, Any]:
+    if method != "POST":
+        return response(405, {"message": "Method not allowed"})
+    payload = parse_json_body(event)
+    email = str(payload.get("email", "")).strip().lower()
+    device_id = str(payload.get("device_id", "")).strip()[:160]
+    ctx = client_context(event)
+    import hashlib, time
+    key_material = f"{email}|{ctx.get('ip')}"
+    attempt_id = "admin-precheck-" + hashlib.sha256(key_material.encode("utf-8")).hexdigest()[:40]
+    now_epoch = epoch_seconds()
+    attempt = get_item(ADMIN_PRELOGIN_ATTEMPTS_TABLE, attempt_id) or {"id": attempt_id, "failed_count": 0}
+    locked_until = int(attempt.get("locked_until", 0) or 0)
+    # Fixed server-side minimum response delay to slow guessing and keep timing bland.
+    time.sleep(5)
+    if locked_until and locked_until > now_epoch:
+        put_activity_raw("admin_precheck_rate_limited", "Admin pre-login check rate-limited", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
+        return response(403, {"ok": False, "message": "Access denied"})
+    user = cognito_admin_user_for_email(email) if email else None
+    allowed = bool(user)
+    if allowed and device_id:
+        active_devices = [item for item in scan_all(ADMIN_DEVICES_TABLE, filter_expression=Attr("email").eq(email)) if item.get("status") == "active"]
+        if active_devices:
+            allowed = any(item.get("device_id") == device_id for item in active_devices)
+        # If the user has no active devices, allow the first Cognito login so the device can register.
+    if not allowed:
+        failed = int(attempt.get("failed_count", 0) or 0) + 1
+        update = {"id": attempt_id, "failed_count": failed, "updated_at": now_iso(), "ttl": now_epoch + 86400, **ctx}
+        if failed >= 5:
+            update["locked_until"] = now_epoch + 900
+            put_activity_raw("admin_lockout_started", "Admin pre-login temporary lockout started", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
+        ADMIN_PRELOGIN_ATTEMPTS_TABLE.put_item(Item=normalize_decimal(update))
+        put_activity_raw("admin_precheck_denied", "Admin pre-login check denied", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
+        return response(403, {"ok": False, "message": "Access denied"})
+    ADMIN_PRELOGIN_ATTEMPTS_TABLE.delete_item(Key={"id": attempt_id})
+    put_activity_raw("admin_precheck_allowed", "Admin pre-login check allowed", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), "device_id": device_id, **ctx})
+    return response(200, {"ok": True, "message": "Continue to Cognito login"})
+
 def handle_suggestions(event: Dict[str, Any], method: str) -> Dict[str, Any]:
     if method == "GET":
         return response(200, {"message": "Suggestions are accepted by POST and held for moderation before publication."})
@@ -216,6 +357,7 @@ def handle_suggestions(event: Dict[str, Any], method: str) -> Dict[str, Any]:
         "source": "public_site_suggestion",
     }
     SUGGESTIONS_TABLE.put_item(Item=item)
+    put_activity_raw("public_suggestion_submitted", f"New public suggestion submitted: {name}", {"suggestion_id": suggestion_id, "sport": sport, "notification_status": "queued_for_admin_pwa_push_scaffold", **client_context(event)})
     return response(202, {"ok": True, "id": suggestion_id, "status": "pending_review"})
 
 
@@ -538,6 +680,56 @@ def handle_activity_log(path_parts: List[str], event: Dict[str, Any], method: st
     return response(405, {"message": "Method not allowed"})
 
 
+
+def handle_admin_devices(path_parts: List[str], event: Dict[str, Any], method: str, claims: Dict[str, Any]) -> Dict[str, Any]:
+    actor = actor_from_claims(claims)
+    email = str(actor.get("email") or "").lower()
+    if method == "GET":
+        items = scan_all(ADMIN_DEVICES_TABLE, filter_expression=Attr("email").eq(email)) if email else []
+        items.sort(key=lambda item: str(item.get("last_seen_at", item.get("registered_at", ""))), reverse=True)
+        return response(200, items)
+    payload = parse_json_body(event)
+    if method == "POST":
+        device_id = str(payload.get("device_id", "")).strip()[:160]
+        if not device_id:
+            return response(400, {"message": "device_id is required"})
+        now = now_iso()
+        item_id = f"admin-device-{actor.get('sub')}-{device_id}"[:240]
+        existing = get_item(ADMIN_DEVICES_TABLE, item_id) or {}
+        item = {
+            **existing,
+            "id": item_id,
+            "device_id": device_id,
+            "user_sub": actor.get("sub", ""),
+            "email": email,
+            "username": actor.get("username", ""),
+            "groups": actor.get("groups", []),
+            "device_label": str(payload.get("device_label", "Admin device")).strip()[:160],
+            "status": str(payload.get("status", existing.get("status", "active"))).strip()[:40] or "active",
+            "notifications_enabled": bool(payload.get("notifications_enabled", existing.get("notifications_enabled", False))),
+            "push_subscription": payload.get("push_subscription") if isinstance(payload.get("push_subscription"), dict) else existing.get("push_subscription"),
+            "registered_at": existing.get("registered_at", now),
+            "last_seen_at": now,
+            "updated_at": now,
+            "client": client_context(event),
+        }
+        ADMIN_DEVICES_TABLE.put_item(Item=normalize_decimal(item))
+        write_activity("admin_device_registered", f"Admin device registered/updated: {item.get('device_label')}", claims=claims, details={"device_id": device_id})
+        return response(201, item)
+    if method == "DELETE" and path_parts:
+        device_id = path_parts[0]
+        item_id = f"admin-device-{actor.get('sub')}-{device_id}"[:240]
+        existing = get_item(ADMIN_DEVICES_TABLE, item_id)
+        if not existing:
+            return response(404, {"message": "Device not found"})
+        existing["status"] = "revoked"
+        existing["revoked_at"] = now_iso()
+        existing["updated_at"] = now_iso()
+        ADMIN_DEVICES_TABLE.put_item(Item=normalize_decimal(existing))
+        write_activity("admin_device_revoked", f"Admin device revoked: {existing.get('device_label', device_id)}", claims=claims, details={"device_id": device_id})
+        return response(200, {"ok": True, "device_id": device_id, "status": "revoked"})
+    return response(405, {"message": "Method not allowed"})
+
 def handle_admin(event: Dict[str, Any], method: str, path_parts: List[str], query: Dict[str, str]) -> Dict[str, Any]:
     claims = admin_claims_or_raise(event)
     if not path_parts or path_parts[0] == "me":
@@ -545,6 +737,9 @@ def handle_admin(event: Dict[str, Any], method: str, path_parts: List[str], quer
 
     if path_parts[0] == "activity-log":
         return handle_activity_log(path_parts[1:], event, method, claims)
+
+    if path_parts[0] == "devices":
+        return handle_admin_devices(path_parts[1:], event, method, claims)
 
     if path_parts[0] == "collections":
         if len(path_parts) < 2:
@@ -580,6 +775,10 @@ def lambda_handler(event, context):
     try:
         if path_parts and path_parts[0] == "admin":
             return handle_admin(event, method, path_parts[1:], query)
+        if path_parts and path_parts[0] == "admin-precheck":
+            return handle_admin_precheck(event, method)
+        if path_parts and path_parts[0] == "notifications":
+            return handle_public_notifications(event, method, path_parts)
 
         if path_parts and path_parts[0] != "suggestions" and method != "GET":
             return response(405, {"message": "Method not allowed"})

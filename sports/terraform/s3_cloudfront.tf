@@ -153,6 +153,31 @@ resource "aws_s3_object" "config" {
   key           = "config.js"
   content_type  = "application/javascript; charset=utf-8"
   cache_control = "no-cache"
-  content       = "window.SPORTSPOT_CONFIG = { apiBaseUrl: \"${aws_apigatewayv2_api.http.api_endpoint}\" };\n"
-  etag          = md5("window.SPORTSPOT_CONFIG = { apiBaseUrl: \"${aws_apigatewayv2_api.http.api_endpoint}\" };\n")
+  content       = <<EOT
+window.SPORTSPOT_CONFIG = {
+  apiBaseUrl: "${aws_apigatewayv2_api.http.api_endpoint}",
+  admin: {
+    cognitoDomain: "https://${aws_cognito_user_pool_domain.admin.domain}.auth.${var.aws_region}.amazoncognito.com",
+    clientId: "${aws_cognito_user_pool_client.admin.id}",
+    redirectUri: "${local.public_site_url}/admin/",
+    logoutUri: "${local.public_site_url}/admin/",
+    userPoolId: "${aws_cognito_user_pool.admin.id}",
+    region: "${var.aws_region}"
+  }
+};
+EOT
+  etag = md5(<<EOT
+window.SPORTSPOT_CONFIG = {
+  apiBaseUrl: "${aws_apigatewayv2_api.http.api_endpoint}",
+  admin: {
+    cognitoDomain: "https://${aws_cognito_user_pool_domain.admin.domain}.auth.${var.aws_region}.amazoncognito.com",
+    clientId: "${aws_cognito_user_pool_client.admin.id}",
+    redirectUri: "${local.public_site_url}/admin/",
+    logoutUri: "${local.public_site_url}/admin/",
+    userPoolId: "${aws_cognito_user_pool.admin.id}",
+    region: "${var.aws_region}"
+  }
+};
+EOT
+  )
 }

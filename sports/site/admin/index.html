@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sports.vk2ale Admin</title>
+  <meta name="theme-color" content="#101827" />
+  <meta name="description" content="Sports.vk2ale protected admin PWA." />
+  <link rel="manifest" href="/admin/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body>
+  <header class="admin-topbar">
+    <div>
+      <p class="eyebrow">Protected admin PWA</p>
+      <h1>Sports.vk2ale Admin</h1>
+    </div>
+    <div class="top-actions">
+      <span id="authSummary" class="auth-summary">Not signed in</span>
+      <button id="installAdmin" hidden>Install admin PWA</button>
+      <button id="logoutButton" hidden>Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="gatePanel" class="panel gate-panel">
+      <h2>Admin access</h2>
+      <p>This admin PWA is separate from the public sports app. Enter your admin email to start the server-side eligibility and device check. MFA/passkeys can be enabled later in Cognito without changing this PWA flow.</p>
+      <form id="precheckForm" class="form-grid">
+        <label>Admin email
+          <input id="adminEmail" type="email" autocomplete="username" required placeholder="admin@example.com" />
+        </label>
+        <label>Device label
+          <input id="deviceLabel" placeholder="Tony Linux laptop Firefox" />
+        </label>
+        <button type="submit">Continue to Cognito login</button>
+      </form>
+      <p id="gateStatus" class="status" role="status"></p>
+    </section>
+
+    <section id="adminPanel" class="admin-layout" hidden>
+      <nav class="tabs" aria-label="Admin sections">
+        <button data-tab="suggestions" class="active">Suggestions</button>
+        <button data-tab="records">Curated records</button>
+        <button data-tab="activity">Activity log</button>
+        <button data-tab="devices">Devices</button>
+        <button data-tab="backup">Backup / export</button>
+      </nav>
+
+      <section id="tab-suggestions" class="panel tab-panel">
+        <div class="section-head"><h2>Pending suggestions</h2><button id="refreshSuggestions">Refresh</button></div>
+        <div class="split">
+          <div><table id="suggestionsTable"><thead><tr><th>Status</th><th>Name</th><th>Sport</th><th>Type</th></tr></thead><tbody></tbody></table></div>
+          <div class="detail-card"><h3>Suggestion details</h3><pre id="suggestionDetails">Select a suggestion.</pre><div class="button-row"><button id="approveBody">Approve as official body</button><button id="approvePathway">Approve as pathway</button><button id="rejectSuggestion">Reject</button><button id="deleteSuggestion" class="danger">Delete</button></div></div>
+        </div>
+      </section>
+
+      <section id="tab-records" class="panel tab-panel" hidden>
+        <div class="section-head"><h2>Curated records</h2><button id="refreshRecords">Refresh</button></div>
+        <div class="form-row"><label>Collection <select id="collectionSelect"><option value="sport_bodies">Official bodies</option><option value="top_players">Top players</option><option value="pathways">Pathways</option><option value="tournaments">Tournaments</option><option value="events">Events</option></select></label></div>
+        <div class="split"><table id="recordsTable"><thead><tr><th>ID</th><th>Name</th><th>Sport</th></tr></thead><tbody></tbody></table><div class="detail-card"><h3>Record JSON</h3><textarea id="recordEditor" rows="18" spellcheck="false"></textarea><div class="button-row"><button id="saveRecord">Save</button><button id="deleteRecord" class="danger">Delete</button></div></div></div>
+      </section>
+
+      <section id="tab-activity" class="panel tab-panel" hidden>
+        <div class="section-head"><h2>Activity log</h2><button id="refreshActivity">Refresh</button></div>
+        <table id="activityTable"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Summary</th></tr></thead><tbody></tbody></table>
+      </section>
+
+      <section id="tab-devices" class="panel tab-panel" hidden>
+        <div class="section-head"><h2>Registered admin devices</h2><button id="refreshDevices">Refresh</button></div>
+        <p class="muted">Devices are registered only after a successful Cognito admin login. PWA install alone does not create admin trust.</p>
+        <table id="devicesTable"><thead><tr><th>Device</th><th>Status</th><th>Notifications</th><th>Last seen</th><th>Action</th></tr></thead><tbody></tbody></table>
+        <div class="button-row"><button id="registerThisDevice">Register/update this device</button><button id="enableAdminNotifications">Enable admin notifications</button><button id="disableAdminNotifications">Disable admin notifications</button></div>
+      </section>
+
+      <section id="tab-backup" class="panel tab-panel" hidden>
+        <h2>Backup / export</h2>
+        <p>Exports are client-side JSON downloads from the protected admin API.</p>
+        <div class="button-row"><button id="exportAll">Export catalogue JSON</button><button id="exportActivity">Export activity log JSON</button></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/config.js"></script>
+  <script src="/admin/admin.js" type="module"></script>
+</body>
+</html>
