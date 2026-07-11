@@ -132,12 +132,23 @@ async function deleteRecord() { if (!selectedRecord || !confirm('Delete this rec
 async function refreshActivity() { const items = await adminFetch('/admin/activity-log?limit=500'); $('#activityTable tbody').innerHTML = items.map(i => `<tr><td>${safe(i.created_at)}</td><td>${safe(i.action)}</td><td>${safe(i.actor_email || i.actor_username || 'system')}</td><td>${safe(i.summary)}</td></tr>`).join(''); }
 async function refreshDevices() { const items = await adminFetch('/admin/devices'); $('#devicesTable tbody').innerHTML = items.map(i => `<tr><td>${safe(i.device_label || i.device_id)}</td><td>${safe(i.status)}</td><td>${i.notifications_enabled ? 'enabled' : 'disabled'}</td><td>${safe(i.last_seen_at || '')}</td><td><button data-revoke="${safe(i.device_id)}" class="danger">Revoke</button></td></tr>`).join('') || '<tr><td colspan="5">No devices.</td></tr>'; document.querySelectorAll('[data-revoke]').forEach(b => b.addEventListener('click', async () => { if(confirm('Revoke this admin device?')) { await adminFetch(`/admin/devices/${encodeURIComponent(b.dataset.revoke)}`, { method: 'DELETE' }); await refreshDevices(); } })); }
 async function enableAdminNotifications(enabled) {
-  if (!('Notification' in window)) return alert('This browser does not support notifications.');
-  if (enabled && Notification.permission !== 'granted') await Notification.requestPermission();
+  if (enabled && !cfg.vapidPublicKey) {
+    alert('Push delivery is not configured yet. This admin device can still be registered, but notification delivery will be available after VAPID keys are added.');
+    await registerDevice(true, false, null);
+    await refreshDevices();
+    return;
+  }
+  if (enabled && !('Notification' in window)) return alert('This browser does not support notifications.');
+  if (enabled && (!('serviceWorker' in navigator) || !('PushManager' in window))) return alert('This browser does not support web push notifications.');
+  if (enabled && Notification.permission !== 'granted') {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return alert('Notifications were not enabled.');
+  }
   let sub = null;
-  if (enabled && 'serviceWorker' in navigator && 'PushManager' in window && cfg.vapidPublicKey) {
+  if (enabled) {
     const reg = await navigator.serviceWorker.ready;
-    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cfg.vapidPublicKey });
+    sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cfg.vapidPublicKey });
   }
   await registerDevice(true, enabled, sub ? sub.toJSON() : null);
   await refreshDevices();

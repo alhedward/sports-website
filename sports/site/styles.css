@@ -484,13 +484,15 @@ body.standalone-mode .drawer-overlay:not([hidden]) {
 .settings-modal {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 1000;
   display: grid;
   place-items: center;
   padding: 1rem;
   background: rgba(0,0,0,.55);
 }
 .settings-card {
+  position: relative;
+  z-index: 1001;
   max-width: 520px;
   width: min(520px, 100%);
   background: var(--surface, #102027);
@@ -500,3 +502,11 @@ body.standalone-mode .drawer-overlay:not([hidden]) {
   box-shadow: 0 24px 80px rgba(0,0,0,.35);
 }
 .button-row { display: flex; flex-wrap: wrap; gap: .6rem; }
+
+.drawer-settings:hover,
+.drawer-settings:focus-visible {
+  outline: none;
+  background: rgba(128,243,179,0.12);
+  border-color: rgba(128,243,179,0.36);
+}
+body.settings-open { overflow: hidden; }
