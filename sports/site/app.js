@@ -1,3 +1,4 @@
+const APP_VERSION = '0.7.16-about-version-check';
 const config = window.SPORTSPOT_CONFIG || {};
 const API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
 
@@ -521,6 +522,13 @@ const publicNotification = {
   status: document.querySelector('#publicNotificationStatus'),
 };
 
+const aboutPanel = {
+  button: document.querySelector('#aboutButton'),
+  panel: document.querySelector('#aboutPanel'),
+  close: document.querySelector('#closeAbout'),
+  version: document.querySelector('#aboutVersion'),
+};
+
 function setPublicNotificationStatus(message) {
   if (publicNotification.status) publicNotification.status.textContent = message || '';
 }
@@ -538,6 +546,23 @@ function closePublicSettingsPanel() {
   publicNotification.panel.hidden = true;
   document.body.classList.remove('settings-open');
   publicNotification.settingsButton?.focus();
+}
+
+function openAboutPanel() {
+  if (!aboutPanel.panel) return;
+  closeDrawer?.();
+  closePublicSettingsPanel?.();
+  if (aboutPanel.version) aboutPanel.version.textContent = APP_VERSION;
+  aboutPanel.panel.hidden = false;
+  document.body.classList.add('settings-open');
+  setTimeout(() => aboutPanel.close?.focus(), 0);
+}
+
+function closeAboutPanel() {
+  if (!aboutPanel.panel) return;
+  aboutPanel.panel.hidden = true;
+  document.body.classList.remove('settings-open');
+  aboutPanel.button?.focus();
 }
 
 async function publicNotificationSubscription() {
@@ -609,6 +634,7 @@ document.addEventListener('click', event => {
     openPublicSettingsPanel();
     return;
   }
+
   const closeButton = event.target.closest?.('#closeSettings');
   if (closeButton) {
     event.preventDefault();
@@ -616,16 +642,45 @@ document.addEventListener('click', event => {
     closePublicSettingsPanel();
     return;
   }
+
+  const aboutButton = event.target.closest?.('#aboutButton');
+  if (aboutButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openAboutPanel();
+    return;
+  }
+
+  const closeAboutButton = event.target.closest?.('#closeAbout');
+  if (closeAboutButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeAboutPanel();
+    return;
+  }
+
   if (publicNotification.panel && event.target === publicNotification.panel) {
     closePublicSettingsPanel();
+    return;
+  }
+
+  if (aboutPanel.panel && event.target === aboutPanel.panel) {
+    closeAboutPanel();
   }
 });
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && publicNotification.panel && !publicNotification.panel.hidden) {
+  if (event.key !== 'Escape') return;
+  if (aboutPanel.panel && !aboutPanel.panel.hidden) {
+    closeAboutPanel();
+    return;
+  }
+  if (publicNotification.panel && !publicNotification.panel.hidden) {
     closePublicSettingsPanel();
   }
 });
 
 publicNotification.enable?.addEventListener('click', enablePublicNotifications);
 publicNotification.disable?.addEventListener('click', disablePublicNotifications);
+
+console.info('Sports.vk2ale public app version', APP_VERSION);

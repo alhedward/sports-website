@@ -516,3 +516,29 @@ body.standalone-mode .drawer-overlay:not([hidden]) {
   border-color: rgba(128,243,179,0.36);
 }
 body.settings-open { overflow: hidden; }
+
+
+.about-list {
+  display: grid;
+  gap: .55rem;
+  margin: 1rem 0;
+}
+.about-list div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: .75rem;
+  align-items: start;
+  border-top: 1px solid rgba(255,255,255,.10);
+  padding-top: .55rem;
+}
+.about-list dt {
+  font-weight: 800;
+  color: var(--muted);
+}
+.about-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .about-list div { grid-template-columns: 1fr; gap: .2rem; }
+}

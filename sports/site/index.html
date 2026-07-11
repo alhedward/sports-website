@@ -7,6 +7,7 @@
 
   <meta name="theme-color" content="#071316" />
   <meta name="description" content="Find official sporting bodies, inclusive pathways, major events, and top-player inspiration." />
+  <meta name="application-version" content="0.7.16-about-version-check" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="/styles.css" />
@@ -33,6 +34,7 @@
       <a href="#partner" data-drawer-link>Sponsor options</a>
       <a href="#suggest" data-drawer-link>Suggest a body</a>
       <button id="settingsButton" class="drawer-settings" type="button" aria-label="Notification settings">⚙ Settings</button>
+      <button id="aboutButton" class="drawer-settings" type="button" aria-label="About Sports.vk2ale">ⓘ About</button>
     </nav>
     <button id="drawerBackToTop" class="drawer-top-button" type="button">Back to top ↑</button>
   </aside>
@@ -170,6 +172,22 @@
       </div>
     </section>
 
+
+    <section class="settings-modal" id="aboutPanel" hidden aria-labelledby="aboutTitle" role="dialog" aria-modal="true">
+      <div class="settings-card">
+        <button id="closeAbout" class="ghost" type="button">Close</button>
+        <p class="eyebrow">About</p>
+        <h2 id="aboutTitle">Sports.vk2ale</h2>
+        <p>A community-first sports aggregator for official sporting bodies, participation pathways, major events, and inclusive sport discovery.</p>
+        <dl class="about-list">
+          <div><dt>Version</dt><dd id="aboutVersion">0.7.16-about-version-check</dd></div>
+          <div><dt>Public app</dt><dd>Sports for Everyone PWA</dd></div>
+          <div><dt>Admin app</dt><dd>Separate /admin PWA protected by Cognito</dd></div>
+          <div><dt>Owner</dt><dd>VK2ALE Sports project</dd></div>
+        </dl>
+        <p class="meta">If this version does not change after deployment, your browser or service worker is still serving cached site files.</p>
+      </div>
+    </section>
     <section class="detail" id="detailPanel" hidden>
       <button id="closeDetail" class="ghost">Close</button>
       <div id="detailContent"></div>

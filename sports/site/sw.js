@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.14-admin-pwa-settings-fix';
+const APP_VERSION = '0.7.16-about-version-check';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 
