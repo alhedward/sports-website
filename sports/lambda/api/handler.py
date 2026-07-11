@@ -614,10 +614,14 @@ def admin_update_suggestion_status(suggestion_id: str, status: str, extra: Dict[
 
 
 def handle_admin_suggestion(path_parts: List[str], event: Dict[str, Any], method: str, claims: Dict[str, Any]) -> Dict[str, Any]:
-    if len(path_parts) < 2:
+    # handle_admin() passes only the path parts after /admin/suggestions.
+    # For /admin/suggestions/{id}/status this function receives [{id}, "status"].
+    # Older builds accidentally treated path_parts[1] as the id, which broke
+    # Cognito/API-mode approve/reject/status operations while boto3_direct still worked.
+    if len(path_parts) < 1:
         return response(400, {"message": "Suggestion id is required"})
-    suggestion_id = path_parts[1]
-    action = path_parts[2] if len(path_parts) > 2 else ""
+    suggestion_id = path_parts[0]
+    action = path_parts[1] if len(path_parts) > 1 else ""
 
     if action == "status" and method == "POST":
         payload = parse_json_body(event)

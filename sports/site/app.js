@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.16-about-version-check';
+const APP_VERSION = '0.7.17-admin-suggestion-route-fix';
 const config = window.SPORTSPOT_CONFIG || {};
 const API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
 
