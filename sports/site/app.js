@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.19-admin-cors-preflight-fix';
+const APP_VERSION = '0.7.20-record-form-editor';
 const config = window.SPORTSPOT_CONFIG || {};
 const API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
 

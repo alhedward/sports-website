@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.19-admin-cors-preflight-fix';
+const APP_VERSION = '0.7.20-record-form-editor';
 const STATIC_CACHE = `sports-vk2ale-static-${APP_VERSION}`;
 const API_CACHE = `sports-vk2ale-api-${APP_VERSION}`;
 

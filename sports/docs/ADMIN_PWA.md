@@ -85,3 +85,11 @@ The public PWA settings modal was hardened so the side-drawer cog opens reliably
 
 The public settings/notifications modal is now hidden with an explicit CSS rule so it cannot appear automatically on page load. Notification prompts remain user-initiated from Settings only.
 
+
+## Form and JSON record editing
+
+Curated records open in a field-based form by default. Administrators can switch to
+JSON mode for advanced editing. Switching modes synchronises the current unsaved
+values, while the API continues to validate that the record id matches the URL.
+Lists of simple values are edited one item per line; nested objects are displayed
+as grouped form fields where possible.

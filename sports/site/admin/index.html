@@ -8,7 +8,7 @@
   <meta name="description" content="Sports.vk2ale protected admin PWA." />
   <link rel="manifest" href="/admin/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/admin/admin.css" />
+  <link rel="stylesheet" href="/admin/admin.css?v=0.7.20-record-form-editor" />
 </head>
 <body>
   <header class="admin-topbar">
@@ -59,7 +59,31 @@
       <section id="tab-records" class="panel tab-panel" hidden>
         <div class="section-head"><h2>Curated records</h2><button id="refreshRecords">Refresh</button></div>
         <div class="form-row"><label>Collection <select id="collectionSelect"><option value="sport_bodies">Official bodies</option><option value="top_players">Top players</option><option value="pathways">Pathways</option><option value="tournaments">Tournaments</option><option value="events">Events</option></select></label></div>
-        <div class="split"><table id="recordsTable"><thead><tr><th>ID</th><th>Name</th><th>Sport</th></tr></thead><tbody></tbody></table><div class="detail-card"><h3>Record JSON</h3><textarea id="recordEditor" rows="18" spellcheck="false"></textarea><div class="button-row"><button id="saveRecord">Save</button><button id="deleteRecord" class="danger">Delete</button></div></div></div>
+        <div class="split records-split">
+          <table id="recordsTable"><thead><tr><th>ID</th><th>Name</th><th>Sport</th></tr></thead><tbody></tbody></table>
+          <div class="detail-card record-editor-card">
+            <div class="record-editor-head">
+              <div>
+                <h3>Record editor</h3>
+                <p id="recordEditorStatus" class="muted">Select a record to edit.</p>
+              </div>
+              <div class="editor-toggle" role="group" aria-label="Record editor mode">
+                <button id="showFormEditor" type="button" class="active" aria-pressed="true">Form</button>
+                <button id="showJsonEditor" type="button" aria-pressed="false">JSON</button>
+              </div>
+            </div>
+            <div id="recordFormPanel">
+              <div id="recordForm" class="record-form" aria-label="Record fields"></div>
+            </div>
+            <div id="recordJsonPanel" hidden>
+              <label class="record-json-label">Record JSON
+                <textarea id="recordEditor" rows="22" spellcheck="false"></textarea>
+              </label>
+              <p class="field-help">Advanced mode. The full record must remain valid JSON and its id cannot be changed.</p>
+            </div>
+            <div class="button-row"><button id="saveRecord" disabled>Save</button><button id="deleteRecord" class="danger" disabled>Delete</button></div>
+          </div>
+        </div>
       </section>
 
       <section id="tab-activity" class="panel tab-panel" hidden>
@@ -82,7 +106,7 @@
     </section>
   </main>
 
-  <script src="/config.js"></script>
-  <script src="/admin/admin.js" type="module"></script>
+  <script src="/config.js?v=0.7.20-record-form-editor"></script>
+  <script src="/admin/admin.js?v=0.7.20-record-form-editor" type="module"></script>
 </body>
 </html>

@@ -71,6 +71,7 @@ jobs:
       - name: JavaScript syntax check
         run: |
           node --check sports/site/app.js
+          node --check sports/site/admin/admin.js
           node --check sports/site/sw.js
 
       - name: Terraform fmt

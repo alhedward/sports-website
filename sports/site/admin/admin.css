@@ -40,3 +40,27 @@ tbody tr:hover { background: var(--panel-2); }
 pre { white-space: pre-wrap; overflow: auto; max-height: 520px; }
 .button-row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
 @media (max-width: 900px) { .form-grid, .split { grid-template-columns: 1fr; } .admin-topbar { align-items: flex-start; flex-direction: column; } }
+
+/* Record form / JSON editor */
+.record-editor-card { min-height: 520px; }
+.record-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.record-editor-head p { margin: .15rem 0 0; }
+.editor-toggle { display: inline-flex; gap: .25rem; padding: .2rem; border: 1px solid var(--border); border-radius: .75rem; background: #09131c; flex-shrink: 0; }
+.editor-toggle button { padding: .45rem .75rem; border: 0; background: transparent; }
+.editor-toggle button.active { background: var(--accent); color: #06110a; }
+.record-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem 1rem; max-height: 650px; overflow: auto; padding-right: .25rem; }
+.record-field { display: flex; flex-direction: column; gap: .35rem; min-width: 0; color: var(--muted); font-weight: 650; }
+.record-field textarea { resize: vertical; }
+.record-field-checkbox { display: grid; grid-template-columns: auto 1fr; align-items: center; justify-content: start; }
+.record-field-checkbox input { width: auto; margin: 0; }
+.record-fieldset { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem 1rem; border: 1px solid var(--border); border-radius: .8rem; padding: .9rem; min-width: 0; }
+.record-fieldset legend { color: var(--accent); padding: 0 .35rem; font-weight: 750; }
+.field-help { display: block; color: var(--muted); font-weight: 400; line-height: 1.35; }
+.read-only-field { opacity: .78; cursor: not-allowed; }
+.record-json-label { display: flex; flex-direction: column; gap: .45rem; color: var(--muted); font-weight: 650; }
+.record-json-label textarea { color: var(--text); font-weight: 400; }
+button:disabled { opacity: .48; cursor: not-allowed; filter: none; }
+@media (max-width: 720px) {
+  .record-editor-head { flex-direction: column; }
+  .record-form, .record-fieldset { grid-template-columns: 1fr; }
+}
