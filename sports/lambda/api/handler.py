@@ -27,10 +27,12 @@ ADMIN_ALLOWED_GROUPS = {
     for group in os.environ.get("ADMIN_ALLOWED_GROUPS", "PrimaryAdmins,Admins,Editors").split(",")
     if group.strip()
 }
+PRIMARY_ADMIN_GROUP = os.environ.get("PRIMARY_ADMIN_GROUP", "PrimaryAdmins").strip() or "PrimaryAdmins"
+DEVICE_APPROVAL_TTL_SECONDS = int(os.environ.get("DEVICE_APPROVAL_TTL_SECONDS", "1800"))
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": os.environ.get("CORS_ALLOW_ORIGIN", "*"),
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Admin-Device-Id",
     "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Content-Type": "application/json",
 }
@@ -294,6 +296,7 @@ def handle_admin_precheck(event: Dict[str, Any], method: str) -> Dict[str, Any]:
     payload = parse_json_body(event)
     email = str(payload.get("email", "")).strip().lower()
     device_id = str(payload.get("device_id", "")).strip()[:160]
+    device_label = str(payload.get("device_label", "Admin device")).strip()[:160] or "Admin device"
     ctx = client_context(event)
     import hashlib, time
     key_material = f"{email}|{ctx.get('ip')}"
@@ -306,25 +309,75 @@ def handle_admin_precheck(event: Dict[str, Any], method: str) -> Dict[str, Any]:
     if locked_until and locked_until > now_epoch:
         put_activity_raw("admin_precheck_rate_limited", "Admin pre-login check rate-limited", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
         return response(403, {"ok": False, "message": "Access denied"})
+
     user = cognito_admin_user_for_email(email) if email else None
-    allowed = bool(user)
-    if allowed and device_id:
-        active_devices = [item for item in scan_all(ADMIN_DEVICES_TABLE, filter_expression=Attr("email").eq(email)) if item.get("status") == "active"]
-        if active_devices:
-            allowed = any(item.get("device_id") == device_id for item in active_devices)
-        # If the user has no active devices, allow the first Cognito login so the device can register.
-    if not allowed:
-        failed = int(attempt.get("failed_count", 0) or 0) + 1
-        update = {"id": attempt_id, "failed_count": failed, "updated_at": now_iso(), "ttl": now_epoch + 86400, **ctx}
-        if failed >= 5:
-            update["locked_until"] = now_epoch + 900
-            put_activity_raw("admin_lockout_started", "Admin pre-login temporary lockout started", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
-        ADMIN_PRELOGIN_ATTEMPTS_TABLE.put_item(Item=normalize_decimal(update))
-        put_activity_raw("admin_precheck_denied", "Admin pre-login check denied", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
-        return response(403, {"ok": False, "message": "Access denied"})
-    ADMIN_PRELOGIN_ATTEMPTS_TABLE.delete_item(Key={"id": attempt_id})
-    put_activity_raw("admin_precheck_allowed", "Admin pre-login check allowed", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), "device_id": device_id, **ctx})
-    return response(200, {"ok": True, "message": "Continue to Cognito login"})
+    if user and device_id:
+        user_devices = scan_all(ADMIN_DEVICES_TABLE, filter_expression=Attr("email").eq(email))
+        matching = next((item for item in user_devices if item.get("device_id") == device_id), None)
+        status = str((matching or {}).get("status", ""))
+
+        if status == "active":
+            ADMIN_PRELOGIN_ATTEMPTS_TABLE.delete_item(Key={"id": attempt_id})
+            put_activity_raw("admin_precheck_allowed", "Admin pre-login check allowed", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), "device_id": device_id, **ctx})
+            return response(200, {"ok": True, "message": "Continue to Cognito login"})
+
+        if status == "approved":
+            approval_expires = int((matching or {}).get("approval_expires", 0) or 0)
+            if approval_expires > now_epoch:
+                ADMIN_PRELOGIN_ATTEMPTS_TABLE.delete_item(Key={"id": attempt_id})
+                put_activity_raw("admin_precheck_allowed_approved_device", "Approved admin device allowed to continue to Cognito", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), "device_id": device_id, **ctx})
+                return response(200, {"ok": True, "message": "Continue to Cognito login"})
+
+        # Preserve the original bootstrap behaviour only when this Cognito user has
+        # never had any device record. Once a device exists, additional hardware
+        # must be approved by a PrimaryAdmin.
+        if not user_devices:
+            ADMIN_PRELOGIN_ATTEMPTS_TABLE.delete_item(Key={"id": attempt_id})
+            put_activity_raw("admin_precheck_allowed_first_device", "First admin device allowed to continue to Cognito", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), "device_id": device_id, **ctx})
+            return response(200, {"ok": True, "message": "Continue to Cognito login"})
+
+        now = now_iso()
+        item_id = f"admin-device-{user.get('sub')}-{device_id}"[:240]
+        request_count = int((matching or {}).get("request_count", 0) or 0) + 1
+        pending = {
+            **(matching or {}),
+            "id": item_id,
+            "device_id": device_id,
+            "user_sub": user.get("sub", ""),
+            "email": user.get("email", email),
+            "username": user.get("username", ""),
+            "groups": user.get("groups", []),
+            "device_label": device_label,
+            "status": "pending",
+            "requested_at": (matching or {}).get("requested_at", now),
+            "last_requested_at": now,
+            "request_count": request_count,
+            "updated_at": now,
+            "client": ctx,
+        }
+        for field in ("approved_at", "approved_by_sub", "approved_by_email", "approval_expires", "rejected_at", "rejected_by_sub", "rejected_by_email", "revoked_at"):
+            pending.pop(field, None)
+        ADMIN_DEVICES_TABLE.put_item(Item=normalize_decimal(pending))
+        ADMIN_PRELOGIN_ATTEMPTS_TABLE.delete_item(Key={"id": attempt_id})
+        put_activity_raw(
+            "admin_device_approval_requested",
+            f"Admin device approval requested: {device_label}",
+            {"email_hash": hashlib.sha256(email.encode()).hexdigest(), "device_id": device_id, "device_label": device_label, **ctx},
+        )
+        return response(403, {
+            "ok": False,
+            "code": "DEVICE_APPROVAL_PENDING",
+            "message": "This device is awaiting approval from a PrimaryAdmin.",
+        })
+
+    failed = int(attempt.get("failed_count", 0) or 0) + 1
+    update = {"id": attempt_id, "failed_count": failed, "updated_at": now_iso(), "ttl": now_epoch + 86400, **ctx}
+    if failed >= 5:
+        update["locked_until"] = now_epoch + 900
+        put_activity_raw("admin_lockout_started", "Admin pre-login temporary lockout started", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
+    ADMIN_PRELOGIN_ATTEMPTS_TABLE.put_item(Item=normalize_decimal(update))
+    put_activity_raw("admin_precheck_denied", "Admin pre-login check denied", {"email_hash": hashlib.sha256(email.encode()).hexdigest(), **ctx})
+    return response(403, {"ok": False, "message": "Access denied"})
 
 def handle_suggestions(event: Dict[str, Any], method: str) -> Dict[str, Any]:
     if method == "GET":
@@ -466,6 +519,35 @@ def actor_from_claims(claims: Dict[str, Any]) -> Dict[str, Any]:
         "email": claims.get("email", ""),
         "groups": claims.get("_groups", []),
     }
+
+
+def require_primary_admin(claims: Dict[str, Any]) -> None:
+    groups = set(claims.get("_groups", []))
+    if PRIMARY_ADMIN_GROUP not in groups:
+        raise PermissionError(f"This action requires membership in {PRIMARY_ADMIN_GROUP}")
+
+
+def request_header(event: Dict[str, Any], name: str) -> str:
+    wanted = name.lower()
+    for key, value in (event.get("headers") or {}).items():
+        if str(key).lower() == wanted:
+            return str(value or "").strip()
+    return ""
+
+
+def admin_device_item_id(user_sub: str, device_id: str) -> str:
+    return f"admin-device-{user_sub}-{device_id}"[:240]
+
+
+def require_active_admin_device(event: Dict[str, Any], claims: Dict[str, Any]) -> Dict[str, Any]:
+    actor = actor_from_claims(claims)
+    device_id = request_header(event, "x-admin-device-id")[:160]
+    if not actor.get("sub") or not device_id:
+        raise PermissionError("A registered admin device is required")
+    item = get_item(ADMIN_DEVICES_TABLE, admin_device_item_id(actor.get("sub", ""), device_id))
+    if not item or item.get("status") != "active":
+        raise PermissionError("This admin device is not active")
+    return item
 
 
 def write_activity(action: str, summary: str, *, claims: Dict[str, Any] | None = None, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -689,17 +771,37 @@ def handle_admin_devices(path_parts: List[str], event: Dict[str, Any], method: s
     actor = actor_from_claims(claims)
     email = str(actor.get("email") or "").lower()
     if method == "GET":
+        require_active_admin_device(event, claims)
         items = scan_all(ADMIN_DEVICES_TABLE, filter_expression=Attr("email").eq(email)) if email else []
-        items.sort(key=lambda item: str(item.get("last_seen_at", item.get("registered_at", ""))), reverse=True)
+        items.sort(key=lambda item: str(item.get("last_seen_at", item.get("registered_at", item.get("requested_at", "")))), reverse=True)
         return response(200, items)
+
     payload = parse_json_body(event)
     if method == "POST":
         device_id = str(payload.get("device_id", "")).strip()[:160]
         if not device_id:
             return response(400, {"message": "device_id is required"})
+        header_device_id = request_header(event, "x-admin-device-id")[:160]
+        if header_device_id != device_id:
+            return response(400, {"message": "Device header and payload do not match"})
+
         now = now_iso()
-        item_id = f"admin-device-{actor.get('sub')}-{device_id}"[:240]
+        item_id = admin_device_item_id(actor.get("sub", ""), device_id)
         existing = get_item(ADMIN_DEVICES_TABLE, item_id) or {}
+        actor_devices = scan_all(ADMIN_DEVICES_TABLE, filter_expression=Attr("email").eq(email)) if email else []
+        existing_status = str(existing.get("status", ""))
+        is_first_device = not actor_devices
+
+        if not is_first_device and existing_status not in {"active", "approved"}:
+            return response(403, {"message": "This device must be approved by a PrimaryAdmin before registration"})
+        if existing_status == "approved":
+            approval_expires = int(existing.get("approval_expires", 0) or 0)
+            if approval_expires <= epoch_seconds():
+                existing["status"] = "pending"
+                existing["updated_at"] = now
+                ADMIN_DEVICES_TABLE.put_item(Item=normalize_decimal(existing))
+                return response(403, {"message": "Device approval expired; request approval again"})
+
         item = {
             **existing,
             "id": item_id,
@@ -708,21 +810,27 @@ def handle_admin_devices(path_parts: List[str], event: Dict[str, Any], method: s
             "email": email,
             "username": actor.get("username", ""),
             "groups": actor.get("groups", []),
-            "device_label": str(payload.get("device_label", "Admin device")).strip()[:160],
-            "status": str(payload.get("status", existing.get("status", "active"))).strip()[:40] or "active",
+            "device_label": str(payload.get("device_label", existing.get("device_label", "Admin device"))).strip()[:160] or "Admin device",
+            "status": "active",
             "notifications_enabled": bool(payload.get("notifications_enabled", existing.get("notifications_enabled", False))),
             "push_subscription": payload.get("push_subscription") if isinstance(payload.get("push_subscription"), dict) else existing.get("push_subscription"),
             "registered_at": existing.get("registered_at", now),
+            "activated_at": existing.get("activated_at", now),
             "last_seen_at": now,
             "updated_at": now,
             "client": client_context(event),
         }
+        for field in ("approval_expires", "rejected_at", "rejected_by_sub", "rejected_by_email", "revoked_at"):
+            item.pop(field, None)
         ADMIN_DEVICES_TABLE.put_item(Item=normalize_decimal(item))
-        write_activity("admin_device_registered", f"Admin device registered/updated: {item.get('device_label')}", claims=claims, details={"device_id": device_id})
+        action = "admin_device_activated" if existing_status == "approved" else "admin_device_registered"
+        write_activity(action, f"Admin device registered/updated: {item.get('device_label')}", claims=claims, details={"device_id": device_id})
         return response(201, item)
+
     if method == "DELETE" and path_parts:
+        require_active_admin_device(event, claims)
         device_id = path_parts[0]
-        item_id = f"admin-device-{actor.get('sub')}-{device_id}"[:240]
+        item_id = admin_device_item_id(actor.get("sub", ""), device_id)
         existing = get_item(ADMIN_DEVICES_TABLE, item_id)
         if not existing:
             return response(404, {"message": "Device not found"})
@@ -734,16 +842,68 @@ def handle_admin_devices(path_parts: List[str], event: Dict[str, Any], method: s
         return response(200, {"ok": True, "device_id": device_id, "status": "revoked"})
     return response(405, {"message": "Method not allowed"})
 
+
+def handle_admin_device_requests(path_parts: List[str], event: Dict[str, Any], method: str, claims: Dict[str, Any]) -> Dict[str, Any]:
+    require_active_admin_device(event, claims)
+    require_primary_admin(claims)
+    actor = actor_from_claims(claims)
+
+    if method == "GET" and not path_parts:
+        items = [item for item in scan_all(ADMIN_DEVICES_TABLE) if item.get("status") == "pending"]
+        items.sort(key=lambda item: str(item.get("last_requested_at", item.get("requested_at", ""))), reverse=True)
+        return response(200, items)
+
+    if method == "POST" and len(path_parts) == 2 and path_parts[1] in {"approve", "reject"}:
+        item_id = path_parts[0]
+        item = get_item(ADMIN_DEVICES_TABLE, item_id)
+        if not item:
+            return response(404, {"message": "Device request not found"})
+        if item.get("status") != "pending":
+            return response(409, {"message": "Device request is no longer pending"})
+        now = now_iso()
+        action = path_parts[1]
+        if action == "approve":
+            item["status"] = "approved"
+            item["approved_at"] = now
+            item["approved_by_sub"] = actor.get("sub", "")
+            item["approved_by_email"] = actor.get("email", "")
+            item["approval_expires"] = epoch_seconds() + DEVICE_APPROVAL_TTL_SECONDS
+            item["updated_at"] = now
+            summary = f"Admin device approved: {item.get('device_label', item.get('device_id', 'device'))}"
+            activity_action = "admin_device_approved"
+        else:
+            item["status"] = "revoked"
+            item["rejected_at"] = now
+            item["rejected_by_sub"] = actor.get("sub", "")
+            item["rejected_by_email"] = actor.get("email", "")
+            item["updated_at"] = now
+            item.pop("approval_expires", None)
+            summary = f"Admin device request rejected: {item.get('device_label', item.get('device_id', 'device'))}"
+            activity_action = "admin_device_rejected"
+        ADMIN_DEVICES_TABLE.put_item(Item=normalize_decimal(item))
+        write_activity(activity_action, summary, claims=claims, details={"device_id": item.get("device_id", ""), "request_user": item.get("email", "")})
+        return response(200, item)
+
+    return response(404, {"message": "Admin device request route not found"})
+
 def handle_admin(event: Dict[str, Any], method: str, path_parts: List[str], query: Dict[str, str]) -> Dict[str, Any]:
     claims = admin_claims_or_raise(event)
     if not path_parts or path_parts[0] == "me":
         return response(200, {"authenticated": True, "actor": actor_from_claims(claims)})
 
-    if path_parts[0] == "activity-log":
-        return handle_activity_log(path_parts[1:], event, method, claims)
-
     if path_parts[0] == "devices":
         return handle_admin_devices(path_parts[1:], event, method, claims)
+
+    if path_parts[0] == "device-requests":
+        return handle_admin_device_requests(path_parts[1:], event, method, claims)
+
+    # Every other protected admin operation requires an active device as well as
+    # a valid Cognito token. This makes the pre-login device approval meaningful
+    # even if someone attempts to bypass the PWA and call Cognito directly.
+    require_active_admin_device(event, claims)
+
+    if path_parts[0] == "activity-log":
+        return handle_activity_log(path_parts[1:], event, method, claims)
 
     if path_parts[0] == "collections":
         if len(path_parts) < 2:

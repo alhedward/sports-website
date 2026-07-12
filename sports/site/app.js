@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.20-record-form-editor';
+const APP_VERSION = '0.7.21-primaryadmin-device-approval';
 const config = window.SPORTSPOT_CONFIG || {};
 const API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
 

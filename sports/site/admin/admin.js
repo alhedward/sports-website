@@ -10,6 +10,7 @@ let selectedRecordOriginalId = null;
 let selectedCollection = 'sport_bodies';
 let recordEditorMode = 'form';
 let deferredInstall = null;
+let currentActor = null;
 
 const COLLECTION_FIELD_ORDER = {
   sport_bodies: [
@@ -143,14 +144,32 @@ function isLoggedIn() {
   return claims.exp && claims.exp * 1000 > Date.now() + 30000;
 }
 
+class ApiError extends Error {
+  constructor(message, status, payload = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = payload.code || '';
+    this.payload = payload;
+  }
+}
+
+async function responsePayload(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try { return JSON.parse(text); } catch { return { message: text }; }
+}
+
 async function adminFetch(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   headers.Authorization = `Bearer ${token()}`;
+  headers['X-Admin-Device-Id'] = deviceId();
   const response = await fetch(api(path), { ...options, headers });
+  const payload = await responsePayload(response);
   if (!response.ok) {
-    throw new Error(`${options.method || 'GET'} ${path} failed: HTTP ${response.status}: ${await response.text()}`);
+    throw new ApiError(payload.message || `${options.method || 'GET'} ${path} failed`, response.status, payload);
   }
-  return response.json();
+  return payload;
 }
 
 async function publicFetch(path, body) {
@@ -159,10 +178,11 @@ async function publicFetch(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {})
   });
+  const payload = await responsePayload(response);
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    throw new ApiError(payload.message || `HTTP ${response.status}`, response.status, payload);
   }
-  return response.json();
+  return payload;
 }
 
 async function loginStart(email) {
@@ -233,7 +253,11 @@ async function precheckAndLogin(event) {
     });
     setStatus('Allowed. Opening Cognito login...');
     await loginStart(email);
-  } catch (_error) {
+  } catch (error) {
+    if (error.code === 'DEVICE_APPROVAL_PENDING') {
+      setStatus('Approval requested. Ask a PrimaryAdmin to approve this device in Admin → Devices, then press Continue again on this device.');
+      return;
+    }
     setStatus('Access denied. Check your admin account/device or contact a PrimaryAdmin.');
   }
 }
@@ -247,11 +271,22 @@ async function connect() {
   }
 
   const me = await adminFetch('/admin/me');
-  $('#authSummary').textContent = `${me.actor.email || me.actor.username} · ${(me.actor.groups || []).join(', ')}`;
+  currentActor = me.actor || {};
+  $('#authSummary').textContent = `${currentActor.email || currentActor.username} · ${(currentActor.groups || []).join(', ')}`;
+  try {
+    await registerDevice(false);
+  } catch (error) {
+    clearTokens();
+    currentActor = null;
+    $('#gatePanel').hidden = false;
+    $('#adminPanel').hidden = true;
+    $('#logoutButton').hidden = true;
+    setStatus(error.message || 'This device is not approved for admin access.');
+    return;
+  }
   $('#gatePanel').hidden = true;
   $('#adminPanel').hidden = false;
   $('#logoutButton').hidden = false;
-  await registerDevice(false);
   await refreshSuggestions();
 }
 
@@ -600,6 +635,45 @@ async function refreshActivity() {
   `).join('');
 }
 
+function isPrimaryAdmin() {
+  return (currentActor?.groups || []).includes('PrimaryAdmins');
+}
+
+async function refreshDeviceRequests() {
+  const panel = $('#pendingDeviceRequests');
+  if (!isPrimaryAdmin()) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  const items = await adminFetch('/admin/device-requests');
+  $('#deviceRequestsTable tbody').innerHTML = items.map(item => `
+    <tr>
+      <td>${safe(item.email || item.username)}</td>
+      <td>${safe(item.device_label || item.device_id)}</td>
+      <td>${safe(item.client?.user_agent || '')}</td>
+      <td>${safe(item.client?.ip || '')}</td>
+      <td>${safe(item.last_requested_at || item.requested_at || '')}</td>
+      <td class="button-cell"><button data-approve-request="${safe(item.id)}">Approve</button><button data-reject-request="${safe(item.id)}" class="danger">Reject</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6">No pending device requests.</td></tr>';
+
+  document.querySelectorAll('[data-approve-request]').forEach(button => {
+    button.addEventListener('click', async () => {
+      if (!confirm('Approve this device to complete Cognito login? Approval expires after 30 minutes if it is not activated.')) return;
+      await adminFetch(`/admin/device-requests/${encodeURIComponent(button.dataset.approveRequest)}/approve`, { method: 'POST', body: '{}' });
+      await Promise.all([refreshDeviceRequests(), refreshActivity()]);
+    });
+  });
+  document.querySelectorAll('[data-reject-request]').forEach(button => {
+    button.addEventListener('click', async () => {
+      if (!confirm('Reject this device request?')) return;
+      await adminFetch(`/admin/device-requests/${encodeURIComponent(button.dataset.rejectRequest)}/reject`, { method: 'POST', body: '{}' });
+      await Promise.all([refreshDeviceRequests(), refreshActivity()]);
+    });
+  });
+}
+
 async function refreshDevices() {
   const items = await adminFetch('/admin/devices');
   $('#devicesTable tbody').innerHTML = items.map(item => `
@@ -611,6 +685,8 @@ async function refreshDevices() {
       <td><button data-revoke="${safe(item.device_id)}" class="danger">Revoke</button></td>
     </tr>
   `).join('') || '<tr><td colspan="5">No devices.</td></tr>';
+
+  await refreshDeviceRequests();
 
   document.querySelectorAll('[data-revoke]').forEach(button => {
     button.addEventListener('click', async () => {
@@ -687,6 +763,7 @@ function wire() {
       document.querySelectorAll('.tab-panel').forEach(panel => { panel.hidden = true; });
       $(`#tab-${button.dataset.tab}`).hidden = false;
       if (button.dataset.tab === 'records') refreshRecords().catch(error => alert(error.message));
+      if (button.dataset.tab === 'devices') refreshDevices().catch(error => alert(error.message));
     });
   });
 

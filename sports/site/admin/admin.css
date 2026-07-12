@@ -64,3 +64,9 @@ button:disabled { opacity: .48; cursor: not-allowed; filter: none; }
   .record-editor-head { flex-direction: column; }
   .record-form, .record-fieldset { grid-template-columns: 1fr; }
 }
+
+/* PrimaryAdmin device approval */
+.device-requests { margin: .75rem 0 1.25rem; padding: .9rem; border: 1px solid var(--border); border-radius: .8rem; background: #0e1822; }
+.table-scroll { overflow-x: auto; }
+.button-cell { white-space: nowrap; }
+.button-cell button + button { margin-left: .35rem; }

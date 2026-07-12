@@ -93,7 +93,7 @@ ACTIVITY_LOG_DISPLAY_LIMIT = 500
 
 APP_AUTHOR = "Tony Edward / VK2ALE"
 APP_SUPPORT = "OpenAI ChatGPT coding support"
-APP_VERSION_FALLBACK = "0.7.12-terraform-iam-audit"
+APP_VERSION_FALLBACK = "0.7.21-primaryadmin-device-approval"
 
 
 def read_app_version() -> str:

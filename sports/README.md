@@ -17,6 +17,13 @@ The site is intentionally not just an elite-stats database. It links visitors to
 - Moderated public suggestion endpoint so users can help grow the curated directory without auto-publishing unverified links.
 - Sports-aware deployment helper layout: top-level `sports/` folder and `sports/file.deploy.txt`.
 
+
+## PrimaryAdmin device approval
+
+When an existing admin account attempts to sign in from a new browser or device, the pre-login check records a pending device request instead of allowing Cognito login. A signed-in member of the `PrimaryAdmins` Cognito group can review the request under **Admin → Devices**, then approve or reject it. Approval expires after 30 minutes if the requesting device does not complete Cognito login. Successful login activates the device.
+
+Protected admin API calls now include the browser-generated `X-Admin-Device-Id` header and Lambda verifies that the device is active, in addition to API Gateway JWT validation and Cognito group checks.
+
 ## Deploy with your helper
 
 Use the sports-aware helper:
@@ -118,7 +125,7 @@ The deploy job validates, applies Terraform, and invalidates CloudFront. It does
 
 The frontend includes a `Suggest an official sporting body or pathway` form. Submissions go to the `suggestions` table as `pending_review`; they are not added to the public directory until reviewed. The recommended OpenAI-assisted research workflow is documented in `docs/COMMUNITY_DISCOVERY_PIPELINE.md`.
 
-Current version: 0.7.12-terraform-iam-audit
+Current version: 0.7.21-primaryadmin-device-approval
 
 ## UX polish
 

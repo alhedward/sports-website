@@ -94,6 +94,8 @@ resource "aws_lambda_function" "api" {
       ADMIN_DEVICES_TABLE             = aws_dynamodb_table.admin_devices.name
       ADMIN_PRELOGIN_ATTEMPTS_TABLE   = aws_dynamodb_table.admin_prelogin_attempts.name
       ADMIN_ALLOWED_GROUPS            = join(",", var.admin_allowed_groups)
+      PRIMARY_ADMIN_GROUP             = "PrimaryAdmins"
+      DEVICE_APPROVAL_TTL_SECONDS     = "1800"
       ADMIN_USER_POOL_ID              = aws_cognito_user_pool.admin.id
       ADMIN_APP_CLIENT_ID             = aws_cognito_user_pool_client.admin.id
       CORS_ALLOW_ORIGIN               = var.cors_allow_origin

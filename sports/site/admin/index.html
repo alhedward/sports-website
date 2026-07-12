@@ -8,7 +8,7 @@
   <meta name="description" content="Sports.vk2ale protected admin PWA." />
   <link rel="manifest" href="/admin/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/admin/admin.css?v=0.7.20-record-form-editor" />
+  <link rel="stylesheet" href="/admin/admin.css?v=0.7.21-primaryadmin-device-approval" />
 </head>
 <body>
   <header class="admin-topbar">
@@ -92,9 +92,19 @@
       </section>
 
       <section id="tab-devices" class="panel tab-panel" hidden>
-        <div class="section-head"><h2>Registered admin devices</h2><button id="refreshDevices">Refresh</button></div>
-        <p class="muted">Devices are registered only after a successful Cognito admin login. PWA install alone does not create admin trust.</p>
-        <table id="devicesTable"><thead><tr><th>Device</th><th>Status</th><th>Notifications</th><th>Last seen</th><th>Action</th></tr></thead><tbody></tbody></table>
+        <div class="section-head"><h2>Admin devices</h2><button id="refreshDevices">Refresh</button></div>
+        <div id="pendingDeviceRequests" class="device-requests" hidden>
+          <h3>Pending device requests</h3>
+          <p class="muted">PrimaryAdmins can approve a new phone, tablet or computer. Approval permits the device to complete Cognito login and expires after 30 minutes; successful login activates the device.</p>
+          <div class="table-scroll">
+            <table id="deviceRequestsTable"><thead><tr><th>Admin</th><th>Device</th><th>Browser</th><th>IP</th><th>Requested</th><th>Action</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+        <h3>Registered devices</h3>
+        <p class="muted">Devices become active only after successful Cognito login. PWA installation alone does not create admin trust.</p>
+        <div class="table-scroll">
+          <table id="devicesTable"><thead><tr><th>Device</th><th>Status</th><th>Notifications</th><th>Last seen</th><th>Action</th></tr></thead><tbody></tbody></table>
+        </div>
         <div class="button-row"><button id="registerThisDevice">Register/update this device</button><button id="enableAdminNotifications">Enable admin notifications</button><button id="disableAdminNotifications">Disable admin notifications</button></div>
       </section>
 
@@ -106,7 +116,7 @@
     </section>
   </main>
 
-  <script src="/config.js?v=0.7.20-record-form-editor"></script>
-  <script src="/admin/admin.js?v=0.7.20-record-form-editor" type="module"></script>
+  <script src="/config.js?v=0.7.21-primaryadmin-device-approval"></script>
+  <script src="/admin/admin.js?v=0.7.21-primaryadmin-device-approval" type="module"></script>
 </body>
 </html>
